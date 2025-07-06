@@ -6,7 +6,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void table_set(struct table *t, int key, void const *data) {
+void table_set(struct table *t, int key, void const *val) {
     if (t->max_key < key || t->n == 0) {
         t->max_key = key;
 
@@ -30,7 +30,7 @@ void table_set(struct table *t, int key, void const *data) {
     int const ix = t->n++;
     t->dense [ix] = key;
     t->sparse[key] = ix;
-    memcpy((char*)t->data + (size_t)ix * t->size, data, t->size);
+    memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
 }
 
 void table_drop(struct table *t, int key) {
