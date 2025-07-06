@@ -215,8 +215,12 @@ void* component_data(struct component *c, int i) {
 
     if (succ && i+1 == succ->begin) {
         int const len = succ->end - succ->begin;
-        // TODO: insert into succ directly with memmove() when there's enough cap.
-        struct branch *grown = branch_new(i, succ->end, c->size, 0);
+        if (len < succ->cap) {
+            memmove(succ->data + c->size, succ->data, (size_t)len * c->size);
+            succ->begin -= 1;
+            return branch_ptr(succ, c->size, i);
+        }
+        struct branch *grown = branch_new(i, succ->end, c->size, 2*succ->cap);
         memcpy(grown->data + c->size, succ->data, (size_t)len * c->size);
         remove_branch(c, succ);
         return insert_branch(c, grown)->data;
