@@ -164,6 +164,11 @@ static void component_remove_branch(struct component *c, struct branch *branch) 
     free(branch);
 }
 
+void* component_find(struct component const *c, int i) {
+    struct branch *b = branch_find(c->root, i);
+    return b ? branch_ptr(b, c->size, i) : NULL;
+}
+
 void* component_data(struct component *c, int i) {
     struct branch *b = branch_find(c->root, i);
     if (b) {
