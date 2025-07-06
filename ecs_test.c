@@ -15,7 +15,7 @@ static void count_fn(int entity, void *data, void *ctx) {
     *count += 1;
 }
 
-int main(void) {
+static void int_component_test(void) {
     struct component c = {.size = sizeof(int)};
 
     for (int i = 1; i <= 5; ++i) {
@@ -54,7 +54,9 @@ int main(void) {
         component_drop(&c, i);
     }
     expect(c.root == NULL);
+}
 
+static void tag_component_test(void) {
     struct component tag = {.size = 0};
 
     for (int i = 1; i <= 5; ++i) {
@@ -87,6 +89,75 @@ int main(void) {
     }
     expect(tag.root == NULL);
     expect(component_find(&tag, 1) == NULL);
+}
 
+static void drop_end_test(void) {
+    struct component drop_end = {.size = sizeof(int)};
+    for (int i = 1; i <= 3; ++i) {
+        int *val = component_data(&drop_end, i);
+        *val = i;
+    }
+    component_drop(&drop_end, 3);
+    expect(component_find(&drop_end, 3) == NULL);
+    expect(component_find(&drop_end, 2) != NULL);
+    for (int i = 1; i <= 2; ++i) {
+        component_drop(&drop_end, i);
+    }
+
+}
+
+static void merge_test(void) {
+    struct component merge = {.size = sizeof(int)};
+    int *v1 = component_data(&merge, 1);
+    *v1 = 1;
+    int *v2 = component_data(&merge, 2);
+    *v2 = 2;
+    int *v4 = component_data(&merge, 4);
+    *v4 = 4;
+    int *v5 = component_data(&merge, 5);
+    *v5 = 5;
+    int *v3 = component_data(&merge, 3);
+    *v3 = 3;
+    int sum = 0;
+    component_each(&merge, sum_fn, &sum);
+    expect(sum == 15);
+    for (int i = 1; i <= 5; ++i) {
+        component_drop(&merge, i);
+    }
+}
+
+static void rotate_left_test(void) {
+    struct component rot_l = {.size = 0};
+    component_data(&rot_l, 30);
+    component_data(&rot_l, 20);
+    component_data(&rot_l, 10);
+    expect(component_find(&rot_l, 10) != NULL);
+    expect(component_find(&rot_l, 20) != NULL);
+    expect(component_find(&rot_l, 30) != NULL);
+    component_drop(&rot_l, 10);
+    component_drop(&rot_l, 20);
+    component_drop(&rot_l, 30);
+}
+
+static void rotate_right_test(void) {
+    struct component rot_r = {.size = 0};
+    component_data(&rot_r, 10);
+    component_data(&rot_r, 20);
+    component_data(&rot_r, 30);
+    expect(component_find(&rot_r, 10) != NULL);
+    expect(component_find(&rot_r, 20) != NULL);
+    expect(component_find(&rot_r, 30) != NULL);
+    component_drop(&rot_r, 10);
+    component_drop(&rot_r, 20);
+    component_drop(&rot_r, 30);
+}
+
+int main(void) {
+    int_component_test();
+    tag_component_test();
+    drop_end_test();
+    merge_test();
+    rotate_left_test();
+    rotate_right_test();
     return 0;
 }

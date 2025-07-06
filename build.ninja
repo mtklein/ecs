@@ -1,6 +1,6 @@
 builddir = out
 
-cc   = clang -fsanitize=address,integer,undefined
+cc   = clang -fsanitize=address,integer,undefined -fprofile-instr-generate -fcoverage-mapping
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -13,10 +13,10 @@ rule compile
     deps    = gcc
 
 rule link
-    command = $cc $in -o $out
+    command = $cc $in -o $out -fprofile-instr-generate
 
 rule run
-    command = ./$in > $out
+    command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
 
 build out/ecs.o:       compile  ecs.c
 build out/ecs_test.o:  compile  ecs_test.c
