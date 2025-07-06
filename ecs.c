@@ -81,26 +81,24 @@ static struct branch* avl_remove_min(struct branch *b, struct branch **out) {
 }
 
 static struct branch* avl_remove(struct branch *root, int key) {
-    if (root) {
-        if (key < root->begin) {
-            root->L = avl_remove(root->L, key);
-        } else if (key > root->begin) {
-            root->R = avl_remove(root->R, key);
-        } else {
-            struct branch *L_subtree = root->L,
-                          *R_subtree = root->R;
-            if (R_subtree) {
-                struct branch *min;
-                R_subtree = avl_remove_min(R_subtree, &min);
-                min->L = L_subtree;
-                min->R = R_subtree;
-                return rebalance(min);
-            }
-            return L_subtree;
+    __builtin_assume(root);
+    if (key < root->begin) {
+        root->L = avl_remove(root->L, key);
+    } else if (key > root->begin) {
+        root->R = avl_remove(root->R, key);
+    } else {
+        struct branch *L_subtree = root->L,
+                      *R_subtree = root->R;
+        if (R_subtree) {
+            struct branch *min;
+            R_subtree = avl_remove_min(R_subtree, &min);
+            min->L = L_subtree;
+            min->R = R_subtree;
+            return rebalance(min);
         }
-        return rebalance(root);
+        return L_subtree;
     }
-    __builtin_unreachable();
+    return rebalance(root);
 }
 
 static struct branch* branch_find(struct branch *root, int i) {
