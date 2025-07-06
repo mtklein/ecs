@@ -1,6 +1,7 @@
 - Keep headers focused, exposing only what will be directly used by callers.
 - Don't write comments; instead refactor and refine identifiers to make comments unnecessary.
 - Always use braces with if,for,do,while,etc.
+- Allow lines up to 100 columns.
 - Keep pointer `*`s snug with the variable name on the right,
   or with the type to the left if there is no variable name:
 
