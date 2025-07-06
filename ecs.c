@@ -18,14 +18,6 @@ static int max(int x, int y) {
     return x>y ? x : y;
 }
 
-static int next_pow2(int n) {
-    int cap = 1;
-    while (cap < n) {
-        cap *= 2;
-    }
-    return cap;
-}
-
 static void recalculate_height(struct branch *b) {
     b->height = 1 + max(height(b->L),
                         height(b->R));
@@ -149,7 +141,10 @@ static struct branch* branch_find_gt(struct branch *root, int i) {
 
 static struct branch* branch_new(int begin, int end, size_t size, int cap) {
     if (cap == 0) {
-        cap = next_pow2(end - begin);
+        cap = 1;
+        while (cap < (end - begin)) {
+            cap *= 2;
+        }
     }
 
     struct branch *b = calloc(1, sizeof *b + (size_t)cap * size);
