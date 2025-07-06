@@ -165,12 +165,12 @@ static void* branch_ptr(struct branch *b, size_t size, int i) {
     return b->data + (size_t)(i - b->begin) * size;
 }
 
-static struct branch* component_insert_branch(struct component *c, struct branch *branch) {
+static struct branch* insert_branch(struct component *c, struct branch *branch) {
     c->root = avl_insert(c->root, branch);
     return branch;
 }
 
-static void component_remove_branch(struct component *c, struct branch *branch) {
+static void remove_branch(struct component *c, struct branch *branch) {
     c->root = avl_remove(c->root, branch->begin);
     free(branch);
 }
@@ -195,9 +195,9 @@ void* component_data(struct component *c, int i) {
         struct branch *merge = branch_new(pred->begin, succ->end, c->size, 0);
         memcpy(merge->data                              , pred->data, (size_t)p_len * c->size);
         memcpy(merge->data + (size_t)(p_len+1) * c->size, succ->data, (size_t)s_len * c->size);
-        component_remove_branch(c, pred);
-        component_remove_branch(c, succ);
-        component_insert_branch(c, merge);
+        remove_branch(c, pred);
+        remove_branch(c, succ);
+        insert_branch(c, merge);
         return branch_ptr(merge, c->size, i);
     }
 
@@ -208,8 +208,8 @@ void* component_data(struct component *c, int i) {
         } else {
             struct branch *grown = branch_new(pred->begin, i+1, c->size, 2*pred->cap);
             memcpy(grown->data, pred->data, (size_t)len * c->size);
-            component_remove_branch(c, pred);
-            component_insert_branch(c, grown);
+            remove_branch(c, pred);
+            insert_branch(c, grown);
             pred = grown;
         }
         return branch_ptr(pred, c->size, i);
@@ -220,19 +220,19 @@ void* component_data(struct component *c, int i) {
         // TODO: insert into succ directly with memmove() when there's enough cap.
         struct branch *grown = branch_new(i, succ->end, c->size, 0);
         memcpy(grown->data + c->size, succ->data, (size_t)len * c->size);
-        component_remove_branch(c, succ);
-        component_insert_branch(c, grown);
+        remove_branch(c, succ);
+        insert_branch(c, grown);
         return grown->data;
     }
 
-    return component_insert_branch(c, branch_new(i,i+1,c->size,1))->data;
+    return insert_branch(c, branch_new(i,i+1,c->size,1))->data;
 }
 
 void component_drop(struct component *c, int i) {
     struct branch *b = branch_find(c->root, i);
     if (b) {
         if (b->begin == i && b->end == i+1) {
-            component_remove_branch(c, b);
+            remove_branch(c, b);
             return;
         }
 
@@ -241,9 +241,9 @@ void component_drop(struct component *c, int i) {
             struct branch *R = branch_new(i+1, b->end, c->size, 0);
             memcpy(L->data, branch_ptr(b,c->size,b->begin), (size_t)(i  -  b->begin) * c->size);
             memcpy(R->data, branch_ptr(b,c->size,     i+1), (size_t)(b->end - (i+1)) * c->size);
-            component_remove_branch(c, b);
-            component_insert_branch(c, L);
-            component_insert_branch(c, R);
+            remove_branch(c, b);
+            insert_branch(c, L);
+            insert_branch(c, R);
             return;
         }
 
@@ -257,8 +257,8 @@ void component_drop(struct component *c, int i) {
         if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
             struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
             memcpy(shrunk->data, b->data, (size_t)(b->end - b->begin) * c->size);
-            component_remove_branch(c, b);
-            component_insert_branch(c, shrunk);
+            remove_branch(c, b);
+            insert_branch(c, shrunk);
         }
     }
 }
