@@ -8,69 +8,69 @@
 struct point { float x,y; };
 
 int main(void) {
-    struct component c = {.size = sizeof(struct point)};
+    struct table t = {.size = sizeof(struct point)};
 
-    component_attach(&c, 47, &(struct point){47.0f, -47.f});
-    component_attach(&c, 42, &(struct point){42.0f, -42.f});
-    component_attach(&c, 48, &(struct point){48.0f, -48.f});
-    component_attach(&c, 50, &(struct point){50.0f, -50.f});
+    table_set(&t, 47, &(struct point){47.0f, -47.f});
+    table_set(&t, 42, &(struct point){42.0f, -42.f});
+    table_set(&t, 48, &(struct point){48.0f, -48.f});
+    table_set(&t, 50, &(struct point){50.0f, -50.f});
 
     {
-        struct point *p = component_lookup(&c, 47);
+        struct point *p = table_get(&t, 47);
         expect((int)p->x == 47 && (int)p->y == -47);
     }
     {
-        struct point *p = component_lookup(&c, 42);
+        struct point *p = table_get(&t, 42);
         expect((int)p->x == 42 && (int)p->y == -42);
     }
     {
-        struct point *p = component_lookup(&c, 48);
+        struct point *p = table_get(&t, 48);
         expect((int)p->x == 48 && (int)p->y == -48);
     }
     {
-        struct point *p = component_lookup(&c, 50);
+        struct point *p = table_get(&t, 50);
         expect((int)p->x == 50 && (int)p->y == -50);
     }
-    expect(!component_lookup(&c, 51));
+    expect(!table_get(&t, 51));
 
-    component_detach(&c, 42);
-    expect(!component_lookup(&c, 42));
+    table_drop(&t, 42);
+    expect(!table_get(&t, 42));
     {
-        struct point *p = component_lookup(&c, 47);
+        struct point *p = table_get(&t, 47);
         expect((int)p->x == 47);
     }
     {
-        struct point *p = component_lookup(&c, 48);
+        struct point *p = table_get(&t, 48);
         expect((int)p->x == 48);
     }
     {
-        struct point *p = component_lookup(&c, 50);
+        struct point *p = table_get(&t, 50);
         expect((int)p->x == 50);
     }
 
-    component_detach(&c, 42);
-    expect(!component_lookup(&c, 42));
+    table_drop(&t, 42);
+    expect(!table_get(&t, 42));
 
-    component_detach(&c, 48);
-    expect(!component_lookup(&c, 48));
+    table_drop(&t, 48);
+    expect(!table_get(&t, 48));
 
-    expect(!component_lookup(&c, 10000));
-    component_detach(&c, 10000);
-    expect(!component_lookup(&c, 10000));
+    expect(!table_get(&t, 10000));
+    table_drop(&t, 10000);
+    expect(!table_get(&t, 10000));
 
     {
-        struct point *p = component_lookup(&c, 47);
+        struct point *p = table_get(&t, 47);
         expect((int)p->x == 47);
     }
     {
-        struct point *p = component_lookup(&c, 50);
+        struct point *p = table_get(&t, 50);
         expect((int)p->x == 50);
     }
 
-    for (struct point *p = c.data, *end = p + c.n; p != end; p++) {
+    for (struct point *p = t.data, *end = p + t.n; p != end; p++) {
         printf("{%g, %g}\n", (double)p->x, (double)p->y);
     }
 
-    component_free(&c);
+    table_clear(&t);
     return 0;
 }

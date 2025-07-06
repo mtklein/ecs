@@ -10,36 +10,36 @@ static double now(void) {
 }
 
 static double bench_dense(int n) {
-    struct component c = {.size = sizeof(int)};
+    struct table t = {.size = sizeof(int)};
     double start = now();
     for (int i = 0; i < n; ++i) {
-        component_attach(&c, i, &i);
+        table_set(&t, i, &i);
     }
     double elapsed = now() - start;
-    component_free(&c);
+    table_clear(&t);
     return elapsed;
 }
 
 static double bench_dense_rev(int n) {
-    struct component c = {.size = sizeof(int)};
+    struct table t = {.size = sizeof(int)};
     double start = now();
     for (int i = n - 1; i >= 0; --i) {
-        component_attach(&c, i, &i);
+        table_set(&t, i, &i);
     }
     double elapsed = now() - start;
-    component_free(&c);
+    table_clear(&t);
     return elapsed;
 }
 
 static double bench_sparse(int n) {
-    struct component c = {.size = sizeof(int)};
+    struct table t = {.size = sizeof(int)};
     double start = now();
     for (int i = 0; i < n; ++i) {
         int key = i * 10;
-        component_attach(&c, key, &key);
+        table_set(&t, key, &key);
     }
     double elapsed = now() - start;
-    component_free(&c);
+    table_clear(&t);
     return elapsed;
 }
 

@@ -2,15 +2,15 @@
 
 #include <stddef.h>
 
-struct component {
+struct table {
     size_t size;
     void  *data;
-    int    n, max;
+    int    n,max_key;
     int   *dense;
     int   *sparse;
 };
 
-void  component_attach(struct component      *, int entity, void const *data);
-void  component_detach(struct component      *, int entity);
-void* component_lookup(struct component const*, int entity);
-void  component_free  (struct component*);
+void* table_get  (struct table const *table, int key);
+void  table_set  (struct table       *table, int key, void const *val);
+void  table_drop (struct table       *table, int key);
+void  table_clear(struct table       *table);

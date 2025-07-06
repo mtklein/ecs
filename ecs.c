@@ -6,60 +6,61 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void component_attach(struct component *c, int entity, void const *data) {
-    if (c->max < entity || c->n == 0) {
-        c->max = entity;
+void table_set(struct table *t, int key, void const *data) {
+    if (t->max_key < key || t->n == 0) {
+        t->max_key = key;
 
-        int *sparse = malloc((size_t)(c->max+1) * sizeof *c->sparse);
-        for (int i = 0; i <= c->max; i++) {
+        int *sparse = malloc((size_t)(t->max_key+1) * sizeof *t->sparse);
+        for (int i = 0; i <= t->max_key; i++) {
             sparse[i] = ~0;
         }
-        for (int ix = 0; ix < c->n; ix++) {
-            sparse[c->dense[ix]] = ix;
+        for (int ix = 0; ix < t->n; ix++) {
+            sparse[t->dense[ix]] = ix;
         }
-        free(c->sparse);
-        c->sparse = sparse;
+        free(t->sparse);
+        t->sparse = sparse;
     }
 
-    if (is_pow2_or_zero(c->n)) {
-        size_t const cap = c->n ? 2*(size_t)c->n : 1;
-        c->data  = realloc(c->data,  cap *         c->size );
-        c->dense = realloc(c->dense, cap * sizeof *c->dense);
+    if (is_pow2_or_zero(t->n)) {
+        size_t const cap = t->n ? 2*(size_t)t->n : 1;
+        t->data  = realloc(t->data,  cap *         t->size );
+        t->dense = realloc(t->dense, cap * sizeof *t->dense);
     }
 
-    int const ix = c->n++;
-    c->dense [ix] = entity;
-    c->sparse[entity] = ix;
-    memcpy((char*)c->data + (size_t)ix * c->size, data, c->size);
+    int const ix = t->n++;
+    t->dense [ix] = key;
+    t->sparse[key] = ix;
+    memcpy((char*)t->data + (size_t)ix * t->size, data, t->size);
 }
 
-void component_detach(struct component *c, int entity) {
-    int const ix = entity <= c->max ? c->sparse[entity] : ~0;
+void table_drop(struct table *t, int key) {
+    int const ix = key <= t->max_key ? t->sparse[key] : ~0;
     if (ix != ~0) {
-        c->sparse[entity] = ~0;
-        int const back_ix  = --c->n,
-                  back_key = c->dense[back_ix];
+        t->sparse[key] = ~0;
+        int const back_ix  = --t->n,
+                  back_key = t->dense[back_ix];
         if (ix != back_ix) {
-            c->dense[ix] = back_key;
-            c->sparse[back_key] = ix;
-            memcpy((char      *)c->data + (size_t)     ix * c->size,
-                   (char const*)c->data + (size_t)back_ix * c->size, c->size);
+            t->dense[ix] = back_key;
+            t->sparse[back_key] = ix;
+            memcpy((char      *)t->data + (size_t)     ix * t->size,
+                   (char const*)t->data + (size_t)back_ix * t->size, t->size);
         }
     }
 }
 
-void* component_lookup(struct component const *c, int entity) {
-    if (entity <= c->max) {
-        int const ix = c->sparse[entity];
+void* table_get(struct table const *t, int key) {
+    if (key <= t->max_key) {
+        int const ix = t->sparse[key];
         if (ix != ~0) {
-            return (char*)c->data + (size_t)ix * c->size;
+            return (char*)t->data + (size_t)ix * t->size;
         }
     }
     return NULL;
 }
 
-void component_free(struct component *c) {
-    free(c->sparse);
-    free(c->dense);
-    free(c->data);
+void table_clear(struct table *t) {
+    free(t->sparse);
+    free(t->dense);
+    free(t->data);
+    *t = (struct table){.size=t->size};
 }
