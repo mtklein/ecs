@@ -32,17 +32,14 @@ int index_insert(struct index *ix, int key) {
 
 void index_remove(struct index *ix, int key) {
     int const val = index_lookup(ix, key);
-    if (val == ~0) {
-        return;
-    }
-
-    int const back_val = --ix->vals;
-    int const back_key = ix->dense[back_val];
-
-    ix->sparse[key] = ~0;
-    if (val != back_val) {
-        ix->dense[val] = back_key;
-        ix->sparse[back_key] = val;
+    if (val != ~0) {
+        ix->sparse[key] = ~0;
+        int const back_val = --ix->vals,
+                  back_key = ix->dense[back_val];
+        if (val != back_val) {
+            ix->dense[val] = back_key;
+            ix->sparse[back_key] = val;
+        }
     }
 }
 
