@@ -88,12 +88,12 @@ static struct branch* avl_remove_min(struct branch *b, struct branch **out) {
     return b->R;
 }
 
-static struct branch* avl_remove(struct branch *root, int key) {
+static struct branch* avl_remove(struct branch *root, int begin) {
     __builtin_assume(root);
-    if (key < root->begin) {
-        root->L = avl_remove(root->L, key);
-    } else if (key > root->begin) {
-        root->R = avl_remove(root->R, key);
+    if (begin < root->begin) {
+        root->L = avl_remove(root->L, begin);
+    } else if (begin > root->begin) {
+        root->R = avl_remove(root->R, begin);
     } else {
         struct branch *L_subtree = root->L,
                       *R_subtree = root->R;
