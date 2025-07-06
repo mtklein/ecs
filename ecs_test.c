@@ -249,6 +249,21 @@ static void test_shrink_last_drop(void) {
     component_free(&c);
 }
 
+static void test_shrink_first_drop(void) {
+    struct component c = {.size = sizeof(int)};
+    for (int i = 1; i <= 5; ++i) {
+        int *val = component_data(&c, i);
+        *val = i;
+    }
+    component_drop(&c, 1);
+    component_drop(&c, 2);
+    component_drop(&c, 3);
+    expect(component_find(&c, 3) == NULL);
+    int *v4 = component_find(&c, 4);
+    expect(v4 != NULL && *v4 == 4);
+    component_free(&c);
+}
+
 int main(void) {
     test_int_component();
     test_tag_component();
@@ -264,5 +279,6 @@ int main(void) {
     test_succ_with_pred();
     test_merge_pred_succ_fit();
     test_shrink_last_drop();
+    test_shrink_first_drop();
     return 0;
 }
