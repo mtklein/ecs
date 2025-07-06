@@ -50,10 +50,7 @@ static void test_int_component(void) {
         expect(sum == 120);
     }
 
-    for (int i = 1; i <= 5; ++i) {
-        component_drop(&c, i);
-    }
-    expect(c.root == NULL);
+    component_free(&c);
 }
 
 static void test_tag_component(void) {
@@ -84,10 +81,7 @@ static void test_tag_component(void) {
         expect(count == 4);
     }
 
-    for (int i = 1; i <= 5; ++i) {
-        component_drop(&tag, i);
-    }
-    expect(tag.root == NULL);
+    component_free(&tag);
     expect(component_find(&tag, 1) == NULL);
 }
 
@@ -100,10 +94,7 @@ static void test_drop_end(void) {
     component_drop(&drop_end, 3);
     expect(component_find(&drop_end, 3) == NULL);
     expect(component_find(&drop_end, 2) != NULL);
-    for (int i = 1; i <= 2; ++i) {
-        component_drop(&drop_end, i);
-    }
-
+    component_free(&drop_end);
 }
 
 static void test_merge(void) {
@@ -121,9 +112,7 @@ static void test_merge(void) {
     int sum = 0;
     component_each(&merge, sum_fn, &sum);
     expect(sum == 15);
-    for (int i = 1; i <= 5; ++i) {
-        component_drop(&merge, i);
-    }
+    component_free(&merge);
 }
 
 static void test_rotate_left(void) {
@@ -134,9 +123,7 @@ static void test_rotate_left(void) {
     expect(component_find(&rot_l, 10) != NULL);
     expect(component_find(&rot_l, 20) != NULL);
     expect(component_find(&rot_l, 30) != NULL);
-    component_drop(&rot_l, 10);
-    component_drop(&rot_l, 20);
-    component_drop(&rot_l, 30);
+    component_free(&rot_l);
 }
 
 static void test_rotate_right(void) {
@@ -147,9 +134,7 @@ static void test_rotate_right(void) {
     expect(component_find(&rot_r, 10) != NULL);
     expect(component_find(&rot_r, 20) != NULL);
     expect(component_find(&rot_r, 30) != NULL);
-    component_drop(&rot_r, 10);
-    component_drop(&rot_r, 20);
-    component_drop(&rot_r, 30);
+    component_free(&rot_r);
 }
 
 static void test_double_rotate_lr(void) {
@@ -160,9 +145,7 @@ static void test_double_rotate_lr(void) {
     expect(component_find(&t, 10) != NULL);
     expect(component_find(&t, 20) != NULL);
     expect(component_find(&t, 30) != NULL);
-    component_drop(&t, 10);
-    component_drop(&t, 20);
-    component_drop(&t, 30);
+    component_free(&t);
 }
 
 static void test_double_rotate_rl(void) {
@@ -173,9 +156,7 @@ static void test_double_rotate_rl(void) {
     expect(component_find(&t, 10) != NULL);
     expect(component_find(&t, 20) != NULL);
     expect(component_find(&t, 30) != NULL);
-    component_drop(&t, 10);
-    component_drop(&t, 20);
-    component_drop(&t, 30);
+    component_free(&t);
 }
 
 static void test_remove_min(void) {
@@ -193,9 +174,7 @@ static void test_remove_min(void) {
     expect(component_find(&c, 10) != NULL);
     expect(component_find(&c, 25) != NULL);
     expect(component_find(&c, 30) != NULL);
-    component_drop(&c, 10);
-    component_drop(&c, 25);
-    component_drop(&c, 30);
+    component_free(&c);
 }
 
 static void test_succ_no_pred(void) {
@@ -206,9 +185,7 @@ static void test_succ_no_pred(void) {
     *v2 = 2;
     expect(component_find(&c, 2) != NULL);
     expect(component_find(&c, 3) != NULL);
-    component_drop(&c, 2);
-    component_drop(&c, 3);
-    expect(c.root == NULL);
+    component_free(&c);
 }
 
 static void test_succ_with_pred(void) {
@@ -222,10 +199,7 @@ static void test_succ_with_pred(void) {
     expect(component_find(&c, 1) != NULL);
     expect(component_find(&c, 2) != NULL);
     expect(component_find(&c, 3) != NULL);
-    component_drop(&c, 1);
-    component_drop(&c, 2);
-    component_drop(&c, 3);
-    expect(c.root == NULL);
+    component_free(&c);
 }
 
 static void test_merge_pred_succ_fit(void) {
@@ -243,10 +217,7 @@ static void test_merge_pred_succ_fit(void) {
         expect(val != NULL);
         expect(*val == i);
     }
-    for (int i = 1; i <= 4; ++i) {
-        component_drop(&c, i);
-    }
-    expect(c.root == NULL);
+    component_free(&c);
 }
 
 static void test_shrink_last_drop(void) {
@@ -259,10 +230,7 @@ static void test_shrink_last_drop(void) {
     component_drop(&c, 4);
     component_drop(&c, 3);
     expect(component_find(&c, 3) == NULL);
-    for (int i = 1; i <= 2; ++i) {
-        component_drop(&c, i);
-    }
-    expect(c.root == NULL);
+    component_free(&c);
 }
 
 int main(void) {

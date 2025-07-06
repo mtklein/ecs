@@ -283,3 +283,16 @@ static void each_branch(struct branch *b, void (*fn)(int, void*, void*), void *c
 void component_each(struct component const *c, void (*fn)(int, void *data, void *ctx), void *ctx) {
     each_branch(c->root, fn, ctx, c->size);
 }
+
+static void branch_free(struct branch *b) {
+    if (b) {
+        branch_free(b->L);
+        branch_free(b->R);
+        free(b);
+    }
+}
+
+void component_free(struct component *c) {
+    branch_free(c->root);
+    c->root = NULL;
+}

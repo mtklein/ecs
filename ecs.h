@@ -9,6 +9,7 @@ struct component {
 
 void* component_data(struct component*, int i);
 void  component_drop(struct component*, int i);
+void  component_free(struct component*);
 
 void* component_find(struct component const*, int i);
 void  component_each(struct component const*, void (*fn)(int i, void *data, void *ctx), void *ctx);
