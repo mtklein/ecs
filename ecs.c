@@ -89,7 +89,6 @@ static struct branch* avl_remove_min(struct branch *b, struct branch **out) {
 }
 
 static struct branch* avl_remove(struct branch *root, int begin) {
-    __builtin_assume(root);
     if (begin < root->begin) {
         root->L = avl_remove(root->L, begin);
     } else if (begin > root->begin) {
