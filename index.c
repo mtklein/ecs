@@ -6,7 +6,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-int index_insert(struct index *ix, int key) {
+int index_insert(struct index *ix, int key, void const *src) {
     if (ix->max_key < key) {
         ix->max_key = key;
 
@@ -30,11 +30,12 @@ int index_insert(struct index *ix, int key) {
     int const val = ix->vals++;
     ix->dense [val] = key;
     ix->sparse[key] = val;
+    memcpy((char*)ix->data + (size_t)val * ix->elt, src, ix->elt);
     return val;
 }
 
 void index_remove(struct index *ix, int key) {
-    int const val = index_lookup(ix, key);
+    int const val = key <= ix->max_key ? ix->sparse[key] : ~0;
     if (val != ~0) {
         ix->sparse[key] = ~0;
         int const back_val = --ix->vals,
@@ -48,6 +49,12 @@ void index_remove(struct index *ix, int key) {
     }
 }
 
-int index_lookup(struct index const *ix, int key) {
-    return key <= ix->max_key ? ix->sparse[key] : ~0;
+void* index_lookup(struct index const *ix, int key) {
+    if (key <= ix->max_key) {
+        int const val = ix->sparse[key];
+        if (val != ~0) {
+            return (char*)ix->data + (size_t)val * ix->elt;
+        }
+    }
+    return NULL;
 }
