@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TODO: realloc(), memcpy(), and pointer arithmetic below will break in unpredictable ways
+//       if we use a struct table{.size=0}.  Not sure yet how best to tackle that.
+
 static int max(int x, int y) {
     return x>y ? x : y;
 }
