@@ -41,9 +41,9 @@ void table_drop(struct table *t, int key) {
     int const ix = key < t->slots ? t->ix[key] : ~0;
     if (ix != ~0) {
         t->ix[key] = ~0;
-        int const back_ix  = --t->n;
+        int const back_ix  = --t->n,
+                  back_key = t->key[back_ix];
         if (ix != back_ix) {
-            int const back_key = t->key[back_ix];
             t->key[ix] = back_key;
             t->ix[back_key] = ix;
             memcpy((char      *)t->data + (size_t)     ix * t->size,
