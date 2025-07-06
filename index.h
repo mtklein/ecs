@@ -3,11 +3,11 @@
 #include <stddef.h>
 
 struct index {
-    int   *sparse;
-    int   *dense;
     void  *data;
     size_t elt;
     int    vals, max_key;
+    int   *dense;
+    int   *sparse;
 };
 
 int  index_insert(struct index       *index, int key);

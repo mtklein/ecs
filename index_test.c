@@ -24,31 +24,32 @@ int main(void) {
     expect(3 == index_insert(&ix, 50));
     *val_at(&ix, 3) = (struct point){50.0f, -50.0f};
 
-    expect(0 == index_lookup(&ix, 47));
-    expect(1 == index_lookup(&ix, 42));
-    expect(2 == index_lookup(&ix, 48));
-    expect(3 == index_lookup(&ix, 50));
+    expect( 0 == index_lookup(&ix, 47));
+    expect( 1 == index_lookup(&ix, 42));
+    expect( 2 == index_lookup(&ix, 48));
+    expect( 3 == index_lookup(&ix, 50));
+    expect(~0 == index_lookup(&ix, 51));
 
     expect((int)val_at(&ix, index_lookup(&ix, 47))->y == -47);
     expect((int)val_at(&ix, index_lookup(&ix, 50))->y == -50);
 
     index_remove(&ix, 42);
     expect(~0 == index_lookup(&ix, 42));
-    expect(1 == index_lookup(&ix, 50));
+    expect( 1 == index_lookup(&ix, 50));
     expect((int)val_at(&ix, 1)->x == 50);
-    expect(0 == index_lookup(&ix, 47));
+    expect( 0 == index_lookup(&ix, 47));
     expect((int)val_at(&ix, 0)->x == 47);
-    expect(2 == index_lookup(&ix, 48));
+    expect( 2 == index_lookup(&ix, 48));
 
     index_remove(&ix, 42);
     expect(~0 == index_lookup(&ix, 42));
 
     index_remove(&ix, 48);
     expect(~0 == index_lookup(&ix, 48));
-    expect(0 == index_lookup(&ix, 47));
-    expect((int)val_at(&ix, 0)->x == 47);
-    expect(1 == index_lookup(&ix, 50));
-    expect((int)val_at(&ix, 1)->x == 50);
+    expect( 0 == index_lookup(&ix, 47));
+    expect( (int)val_at(&ix, 0)->x == 47);
+    expect( 1 == index_lookup(&ix, 50));
+    expect( (int)val_at(&ix, 1)->x == 50);
 
     free(ix.sparse);
     free(ix.dense);

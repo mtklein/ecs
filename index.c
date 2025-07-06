@@ -22,13 +22,13 @@ int index_insert(struct index *ix, int key) {
     }
 
     if (is_pow2_or_zero(ix->vals)) {
-        size_t cap = ix->vals ? 2u*(size_t)ix->vals : 1u;
+        size_t const cap = ix->vals ? 2*(size_t)ix->vals : 1;
+        ix->data  = realloc(ix->data,  cap *         ix->elt  );
         ix->dense = realloc(ix->dense, cap * sizeof *ix->dense);
-        ix->data  = realloc(ix->data,  cap * ix->elt);
     }
 
     int const val = ix->vals++;
-    ix->dense[val] = key;
+    ix->dense [val] = key;
     ix->sparse[key] = val;
     return val;
 }
@@ -42,12 +42,8 @@ void index_remove(struct index *ix, int key) {
         if (val != back_val) {
             ix->dense[val] = back_key;
             ix->sparse[back_key] = val;
-            if (ix->elt) {
-                char *data = ix->data;
-                size_t const off = (size_t)val * ix->elt,
-                               back_off = (size_t)back_val * ix->elt;
-                memcpy(data + off, data + back_off, ix->elt);
-            }
+            memcpy((char      *)ix->data + (size_t)     val * ix->elt,
+                   (char const*)ix->data + (size_t)back_val * ix->elt, ix->elt);
         }
     }
 }
