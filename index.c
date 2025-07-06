@@ -6,7 +6,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-int index_insert(struct index *ix, int key, void const *src) {
+void index_insert(struct index *ix, int key, void const *val) {
     if (ix->max_key < key) {
         ix->max_key = key;
 
@@ -14,8 +14,8 @@ int index_insert(struct index *ix, int key, void const *src) {
         for (int i = 0; i <= ix->max_key; i++) {
             sparse[i] = ~0;
         }
-        for (int val = 0; val < ix->vals; val++) {
-            sparse[ix->dense[val]] = val;
+        for (int id = 0; id < ix->vals; id++) {
+            sparse[ix->dense[id]] = id;
         }
         free(ix->sparse);
         ix->sparse = sparse;
@@ -27,33 +27,32 @@ int index_insert(struct index *ix, int key, void const *src) {
         ix->dense = realloc(ix->dense, cap * sizeof *ix->dense);
     }
 
-    int const val = ix->vals++;
-    ix->dense [val] = key;
-    ix->sparse[key] = val;
-    memcpy((char*)ix->data + (size_t)val * ix->elt, src, ix->elt);
-    return val;
+    int const id = ix->vals++;
+    ix->dense [ id] = key;
+    ix->sparse[key] = id;
+    memcpy((char*)ix->data + (size_t)id * ix->elt, val, ix->elt);
 }
 
 void index_remove(struct index *ix, int key) {
-    int const val = key <= ix->max_key ? ix->sparse[key] : ~0;
-    if (val != ~0) {
+    int const id = key <= ix->max_key ? ix->sparse[key] : ~0;
+    if (id != ~0) {
         ix->sparse[key] = ~0;
-        int const back_val = --ix->vals,
-                  back_key = ix->dense[back_val];
-        if (val != back_val) {
-            ix->dense[val] = back_key;
-            ix->sparse[back_key] = val;
-            memcpy((char      *)ix->data + (size_t)     val * ix->elt,
-                   (char const*)ix->data + (size_t)back_val * ix->elt, ix->elt);
+        int const back_id  = --ix->vals,
+                  back_key = ix->dense[back_id];
+        if (id != back_id) {
+            ix->dense[id] = back_key;
+            ix->sparse[back_key] = id;
+            memcpy((char      *)ix->data + (size_t)     id * ix->elt,
+                   (char const*)ix->data + (size_t)back_id * ix->elt, ix->elt);
         }
     }
 }
 
 void* index_lookup(struct index const *ix, int key) {
     if (key <= ix->max_key) {
-        int const val = ix->sparse[key];
-        if (val != ~0) {
-            return (char*)ix->data + (size_t)val * ix->elt;
+        int const id = ix->sparse[key];
+        if (id != ~0) {
+            return (char*)ix->data + (size_t)id * ix->elt;
         }
     }
     return NULL;
