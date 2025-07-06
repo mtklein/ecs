@@ -26,9 +26,18 @@ void table_set(struct table *t, int key, void const *val) {
 
     if (is_pow2_or_zero(t->n)) {
         size_t const cap = t->n ? 2*(size_t)t->n : 1;
-        // TODO: realloc/free both of these together
-        t->key  = realloc(t-> key, cap * sizeof *t->key);
-        t->data = realloc(t->data, cap * t->size);
+        size_t const bytes = cap * (sizeof *t->key + t->size);
+        size_t const old_cap = t->cap;
+        void *mem = realloc(t->key, bytes);
+        if (mem) {
+            char *base = mem;
+            memmove(base + cap * sizeof *t->key,
+                    base + old_cap * sizeof *t->key,
+                    (size_t)t->n * t->size);
+            t->key  = mem;
+            t->data = base + cap * sizeof *t->key;
+            t->cap  = cap;
+        }
     }
 
     int const ix = t->n++;
@@ -65,6 +74,5 @@ void* table_get(struct table const *t, int key) {
 void table_clear(struct table *t) {
     free(t->ix);
     free(t->key);
-    free(t->data);
-    *t = (struct table){.size=t->size};
+    *t = (struct table){.size = t->size};
 }

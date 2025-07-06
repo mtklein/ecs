@@ -3,8 +3,8 @@
 #include <stddef.h>
 
 struct table {
-    size_t size;
-    void  *data;
+    size_t size,cap;
+    void *data;
     int    n,slots;
     int   *key,*ix;
 };
