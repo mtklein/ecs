@@ -1,8 +1,14 @@
+- Keep headers focused, exposing only what will be directly used by callers.
 - Don't write comments; instead refactor and refine identifiers to make comments unnecessary.
 - Always use braces with if,for,do,while,etc.
-- Keep the pointer `*` with the variable name to the right, or with the type to the left if there is no name, e.g. `void* component_data(struct component *comp, int entity);`
-- Instead of disabling -Wpadded, rearrange fields so there is no padding, and if that's not
-  possible, insert anonymous padding bitfields, e.g.
+- Keep pointer `*`s snug with the variable name on the right,
+  or with the type to the left if there is no variable name:
+
+    - void *component_data(struct component * comp, int entity);
+    + void* component_data(struct component *comp, int entity);
+
+- Don't disable -Wpadded.  Instead rearrange struct fields so there is no
+  padding, or if that's not possible, insert anonymous padding bitfields:
 
     struct foo {
         int   len;
@@ -10,13 +16,12 @@
         void *ptr;
     };
 
-- Rename struct leaf to struct branch, and move its definition into ecs.c.  The header just needs a pointer declaration, not a definition.
-- Instead of explicit casts from void*, give names to the cast values and use implicit casting, e.g.
+- When working with generic code and void*, use implicit casting to provide the
+  true types and descriptive names:
 
- static void sum_fn(int entity, void *data, void *ctx) {
-     (void)entity;
--    *(int *)ctx += *(int *)data;
-+    int       *sum = ctx;
-+    int const *val = data;
-+    *sum += *val;
- }
+     void sum(void const *data, void *ctx) {
+    -    *(int *)ctx += *(int *)data;
+    +    int const *val = data;
+    +    int       *sum = ctx;
+    +    *sum += *val;
+     }

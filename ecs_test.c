@@ -3,30 +3,36 @@
 
 static void sum_fn(int entity, void *data, void *ctx) {
     (void)entity;
-    int       *sum = ctx;
     int const *val = data;
+    int       *sum = ctx;
     *sum += *val;
 }
 
 int main(void) {
-    struct component c = { .size = sizeof(int), .root = NULL };
+    struct component c = {.size=sizeof(int)};
 
     for (int i = 1; i <= 5; ++i) {
-        int *slot = component_data(&c, i);
-        *slot = i * 10;
+        int *val = component_data(&c, i);
+        *val = i * 10;
     }
 
-    int *slot = component_data(&c, 3);
-    expect(*slot == 30);
+    {
+        int *val = component_data(&c, 3);
+        expect(*val == 30);
+    }
 
-    int sum = 0;
-    component_each(&c, sum_fn, &sum);
-    expect(sum == 150);
+    {
+        int sum = 0;
+        component_each(&c, sum_fn, &sum);
+        expect(sum == 150);
+    }
 
     component_drop(&c, 3);
-    sum = 0;
-    component_each(&c, sum_fn, &sum);
-    expect(sum == 120);
+    {
+        int sum = 0;
+        component_each(&c, sum_fn, &sum);
+        expect(sum == 120);
+    }
 
     for (int i = 1; i <= 5; ++i) {
         component_drop(&c, i);
