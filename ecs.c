@@ -13,6 +13,7 @@ static _Bool is_pow2_or_zero(int x) {
 void table_set(struct table *t, int key, void const *val) {
     if (key >= t->slots) {
         t->slots = max(key+1, 2*t->slots);
+        // TODO: realloc here and just fill the new slots with ~0
         int *ix_grown = malloc((size_t)t->slots * sizeof *ix_grown);
         for (int i = 0; i < t->slots; i++) {
             ix_grown[i] = ~0;
