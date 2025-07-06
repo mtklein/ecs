@@ -216,9 +216,9 @@ void* component_data(struct component *c, int i) {
     if (succ && i+1 == succ->begin) {
         int const len = succ->end - succ->begin;
         if (len < succ->cap) {
-            memmove(succ->data + c->size, succ->data, (size_t)len * c->size);
             succ->begin -= 1;
-            return branch_ptr(succ, c->size, i);
+            memmove(succ->data + c->size, succ->data, (size_t)len * c->size);
+            return succ->data;
         }
         struct branch *grown = branch_new(i, succ->end, c->size, 2*succ->cap);
         memcpy(grown->data + c->size, succ->data, (size_t)len * c->size);
