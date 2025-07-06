@@ -6,8 +6,7 @@ struct table {
     size_t size;
     void  *data;
     int    n,slots;
-    int   *dense;
-    int   *sparse;
+    int   *key,*ix;
 };
 
 void* table_get  (struct table const *table, int key);
