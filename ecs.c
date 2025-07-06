@@ -1,4 +1,5 @@
 #include "ecs.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -146,6 +147,7 @@ static struct branch* branch_new(int begin, int end, size_t size, int cap) {
             cap *= 2;
         }
     }
+    assert(cap > 0 && (cap & (cap-1)) == 0);
 
     struct branch *b = calloc(1, sizeof *b + (size_t)cap * size);
     b->height = 1;
