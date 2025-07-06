@@ -15,7 +15,7 @@ static void count_fn(int entity, void *data, void *ctx) {
     *count += 1;
 }
 
-static void int_component_test(void) {
+static void test_int_component(void) {
     struct component c = {.size = sizeof(int)};
 
     for (int i = 1; i <= 5; ++i) {
@@ -56,7 +56,7 @@ static void int_component_test(void) {
     expect(c.root == NULL);
 }
 
-static void tag_component_test(void) {
+static void test_tag_component(void) {
     struct component tag = {.size = 0};
 
     for (int i = 1; i <= 5; ++i) {
@@ -91,7 +91,7 @@ static void tag_component_test(void) {
     expect(component_find(&tag, 1) == NULL);
 }
 
-static void drop_end_test(void) {
+static void test_drop_end(void) {
     struct component drop_end = {.size = sizeof(int)};
     for (int i = 1; i <= 3; ++i) {
         int *val = component_data(&drop_end, i);
@@ -106,7 +106,7 @@ static void drop_end_test(void) {
 
 }
 
-static void merge_test(void) {
+static void test_merge(void) {
     struct component merge = {.size = sizeof(int)};
     int *v1 = component_data(&merge, 1);
     *v1 = 1;
@@ -126,7 +126,7 @@ static void merge_test(void) {
     }
 }
 
-static void rotate_left_test(void) {
+static void test_rotate_left(void) {
     struct component rot_l = {.size = 0};
     component_data(&rot_l, 30);
     component_data(&rot_l, 20);
@@ -139,7 +139,7 @@ static void rotate_left_test(void) {
     component_drop(&rot_l, 30);
 }
 
-static void rotate_right_test(void) {
+static void test_rotate_right(void) {
     struct component rot_r = {.size = 0};
     component_data(&rot_r, 10);
     component_data(&rot_r, 20);
@@ -153,11 +153,11 @@ static void rotate_right_test(void) {
 }
 
 int main(void) {
-    int_component_test();
-    tag_component_test();
-    drop_end_test();
-    merge_test();
-    rotate_left_test();
-    rotate_right_test();
+    test_int_component();
+    test_tag_component();
+    test_drop_end();
+    test_merge();
+    test_rotate_left();
+    test_rotate_right();
     return 0;
 }
