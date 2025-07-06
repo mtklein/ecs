@@ -150,18 +150,17 @@ static struct branch* branch_find_gt(struct branch *root, int i) {
     return best;
 }
 
-static struct branch* branch_new_cap(int begin,int end,size_t size,int cap) {
+static struct branch* branch_new(int begin, int end, size_t size, int cap) {
+    if (cap == 0) {
+        cap = next_pow2(end - begin);
+    }
+
     struct branch *b = calloc(1, sizeof *b + (size_t)cap * size);
     b->height = 1;
     b->begin  = begin;
     b->end    = end;
     b->cap    = cap;
     return b;
-}
-
-static struct branch* branch_new(int begin,int end,size_t size) {
-    int cap = next_pow2(end - begin);
-    return branch_new_cap(begin, end, size, cap);
 }
 
 static void* branch_ptr(struct branch *b, size_t size, int i) {
@@ -199,8 +198,7 @@ void* component_data(struct component *c, int i) {
             b = pred;
         } else {
             int cap = pred->cap * 2;
-            struct branch *newl = branch_new_cap(pred->begin, pred->end + 1,
-                                                 c->size, cap);
+            struct branch *newl = branch_new(pred->begin, pred->end + 1, c->size, cap);
             memcpy(newl->data, pred->data, (size_t)len * c->size);
             component_remove_branch(c, pred);
             component_insert_branch(c, newl);
@@ -216,7 +214,7 @@ void* component_data(struct component *c, int i) {
                 b->end += r_len;
                 component_remove_branch(c, succ);
             } else {
-                struct branch *merge = branch_new(b->begin, succ->end, c->size);
+                struct branch *merge = branch_new(b->begin, succ->end, c->size, 0);
                 memcpy(merge->data, b->data, (size_t)l_len * c->size);
                 memcpy(merge->data + (size_t)l_len * c->size,
                        succ->data,
@@ -228,7 +226,7 @@ void* component_data(struct component *c, int i) {
             }
         }
     } else if (succ && i+1 == succ->begin) {
-        struct branch *newl = branch_new(i, succ->end, c->size);
+        struct branch *newl = branch_new(i, succ->end, c->size, 0);
         memcpy(newl->data + (size_t)(succ->begin - newl->begin) * c->size,
                succ->data,
                (size_t)(succ->end - succ->begin) * c->size);
@@ -236,7 +234,7 @@ void* component_data(struct component *c, int i) {
         component_insert_branch(c, newl);
         b = newl;
     } else {
-        b = branch_new(i, i+1, c->size);
+        b = branch_new(i, i+1, c->size, 1);
         component_insert_branch(c, b);
     }
     return branch_ptr(b, c->size, i);
@@ -251,7 +249,7 @@ void component_drop(struct component *c, int i) {
         }
 
         if (i == b->begin) {
-            struct branch *newl = branch_new(i+1, b->end, c->size);
+            struct branch *newl = branch_new(i+1, b->end, c->size, 0);
             memcpy(newl->data, b->data + c->size,
                    (size_t)(b->end - b->begin - 1) * c->size);
             component_remove_branch(c, b);
@@ -263,8 +261,7 @@ void component_drop(struct component *c, int i) {
             b->end -= 1;
             if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
                 int cap = b->cap / 2;
-                struct branch *newl = branch_new_cap(b->begin, b->end,
-                                                     c->size, cap);
+                struct branch *newl = branch_new(b->begin, b->end, c->size, cap);
                 memcpy(newl->data, b->data,
                        (size_t)(b->end - b->begin) * c->size);
                 component_remove_branch(c, b);
@@ -273,9 +270,9 @@ void component_drop(struct component *c, int i) {
             return;
         }
 
-        struct branch *R = branch_new(i+1, b->end, c->size);
+        struct branch *R = branch_new(i+1, b->end, c->size, 0);
         memcpy(R->data, branch_ptr(b, c->size, i+1), (size_t)(b->end - (i+1)) * c->size);
-        struct branch *L = branch_new(b->begin, i, c->size);
+        struct branch *L = branch_new(b->begin, i, c->size, 0);
         memcpy(L->data, b->data, (size_t)(i - b->begin) * c->size);
         component_remove_branch(c, b);
         component_insert_branch(c, L);
