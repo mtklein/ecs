@@ -269,6 +269,6 @@ static void each_branch(struct branch *b, void (*fn)(int, void*, void*), void *c
     }
 }
 
-void component_each(struct component *c, void (*fn)(int, void *data, void *ctx), void *ctx) {
+void component_each(struct component const *c, void (*fn)(int, void *data, void *ctx), void *ctx) {
     each_branch(c->root, fn, ctx, c->size);
 }
