@@ -218,6 +218,18 @@ static void test_succ_with_pred(void) {
     component_free(&c);
 }
 
+static void test_remove_left_child(void) {
+    struct component c = {.size = sizeof(int)};
+    int *v20 = component_data(&c, 20);
+    *v20 = 20;
+    int *v10 = component_data(&c, 10);
+    *v10 = 10;
+    component_drop(&c, 10);
+    expect(component_find(&c, 10) == NULL);
+    expect(component_find(&c, 20) != NULL);
+    component_free(&c);
+}
+
 static void test_merge_pred_succ_fit(void) {
     struct component c = {.size = sizeof(int)};
     int *v1 = component_data(&c, 1);
@@ -277,6 +289,7 @@ int main(void) {
     test_remove_min();
     test_succ_no_pred();
     test_succ_with_pred();
+    test_remove_left_child();
     test_merge_pred_succ_fit();
     test_shrink_last_drop();
     test_shrink_first_drop();
