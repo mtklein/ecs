@@ -23,6 +23,14 @@ int main(void) {
         *val = i * 10;
     }
 
+    expect(component_find(&c, 0) == NULL);
+    for (int i = 1; i <= 5; ++i) {
+        int *val = component_find(&c, i);
+        expect(val != NULL);
+        expect(*val == i * 10);
+    }
+    expect(component_find(&c, 6) == NULL);
+
     {
         int *val = component_data(&c, 3);
         expect(*val == 30);
@@ -35,6 +43,7 @@ int main(void) {
     }
 
     component_drop(&c, 3);
+    expect(component_find(&c, 3) == NULL);
     {
         int sum = 0;
         component_each(&c, sum_fn, &sum);
@@ -53,6 +62,12 @@ int main(void) {
         expect(p != NULL);
     }
 
+    expect(component_find(&tag, 0) == NULL);
+    for (int i = 1; i <= 5; ++i) {
+        expect(component_find(&tag, i) != NULL);
+    }
+    expect(component_find(&tag, 6) == NULL);
+
     {
         int count = 0;
         component_each(&tag, count_fn, &count);
@@ -60,6 +75,7 @@ int main(void) {
     }
 
     component_drop(&tag, 3);
+    expect(component_find(&tag, 3) == NULL);
     {
         int count = 0;
         component_each(&tag, count_fn, &count);
@@ -70,6 +86,7 @@ int main(void) {
         component_drop(&tag, i);
     }
     expect(tag.root == NULL);
+    expect(component_find(&tag, 1) == NULL);
 
     return 0;
 }
