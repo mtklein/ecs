@@ -190,32 +190,17 @@ void* component_data(struct component *c, int i) {
                   *succ = branch_find_gt(c->root, i);
 
     if (pred && succ && i == pred->end && i + 1 == succ->begin) {
-        int const len = pred->end - pred->begin;
-        if (len < pred->cap) {
-            pred->end += 1;
-            b = pred;
-        } else {
-            struct branch *newl = branch_new(pred->begin, pred->end + 1, c->size, pred->cap * 2);
-            memcpy(newl->data, pred->data, (size_t)len * c->size);
-            component_remove_branch(c, pred);
-            component_insert_branch(c, newl);
-            b = newl;
-        }
-        int const l_len = b->end - b->begin,
+        int const l_len = pred->end - pred->begin,
                   r_len = succ->end - succ->begin;
-        if (l_len + r_len <= b->cap) {
-            memcpy(b->data + (size_t)l_len * c->size, succ->data, (size_t)r_len * c->size);
-            b->end += r_len;
-            component_remove_branch(c, succ);
-        } else {
-            struct branch *merge = branch_new(b->begin, succ->end, c->size, 0);
-            memcpy(merge->data, b->data, (size_t)l_len * c->size);
-            memcpy(merge->data + (size_t)l_len * c->size, succ->data, (size_t)r_len * c->size);
-            component_remove_branch(c, b);
-            component_remove_branch(c, succ);
-            component_insert_branch(c, merge);
-            b = merge;
-        }
+        struct branch *merge = branch_new(pred->begin, succ->end, c->size, 0);
+        memcpy(merge->data, pred->data, (size_t)l_len * c->size);
+        memcpy(merge->data + (size_t)(l_len + 1) * c->size,
+               succ->data,
+               (size_t)r_len * c->size);
+        component_remove_branch(c, pred);
+        component_remove_branch(c, succ);
+        component_insert_branch(c, merge);
+        b = merge;
     } else if (pred && i == pred->end) {
         int const len = pred->end - pred->begin;
         if (len < pred->cap) {
