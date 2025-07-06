@@ -242,10 +242,18 @@ void component_drop(struct component *c, int i) {
         }
 
         if (b->begin == i) {
-            struct branch *shrunk = branch_new(i+1, b->end, c->size, 0);
-            memcpy(shrunk->data, branch_ptr(b,c->size,i+1), (size_t)(b->end - (i+1)) * c->size);
-            component_remove_branch(c, b);
-            component_insert_branch(c, shrunk);
+            memmove(b->data,
+                    branch_ptr(b, c->size, i+1),
+                    (size_t)(b->end - (i+1)) * c->size);
+            b->begin += 1;
+            if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
+                struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
+                memcpy(shrunk->data,
+                       b->data,
+                       (size_t)(b->end - b->begin) * c->size);
+                component_remove_branch(c, b);
+                component_insert_branch(c, shrunk);
+            }
             return;
         }
 
