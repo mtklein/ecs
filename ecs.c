@@ -17,7 +17,7 @@ void table_set(struct table *t, int key, void const *val) {
     if (key >= t->slots) {
         int const slots = max(key+1, 2*t->slots);
         t->ix = realloc(t->ix, (size_t)slots * sizeof *t->ix);
-        memset(t->ix + t->slots, 0xff, (size_t)(slots - t->slots) * sizeof *t->ix);
+        memset(t->ix + t->slots, ~0, (size_t)(slots - t->slots) * sizeof *t->ix);
         t->slots = slots;
     }
 
