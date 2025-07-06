@@ -100,7 +100,7 @@ static struct branch* avl_remove(struct branch *root, int key) {
         }
         return rebalance(root);
     }
-    return NULL;
+    __builtin_unreachable();
 }
 
 static struct branch* branch_find(struct branch *root, int i) {
@@ -203,21 +203,7 @@ void* component_data(struct component *c, int i) {
                (size_t)(succ->end - succ->begin) * c->size);
         component_remove_branch(c, succ);
         component_insert_branch(c, newl);
-        if (pred && pred->end == newl->begin) {
-            struct branch *merge = branch_new(pred->begin, newl->end, c->size);
-            memcpy(merge->data,
-                   pred->data,
-                   (size_t)(pred->end - pred->begin) * c->size);
-            memcpy(merge->data + (size_t)(newl->begin - pred->begin) * c->size,
-                   newl->data,
-                   (size_t)(newl->end - newl->begin) * c->size);
-            component_remove_branch(c, pred);
-            component_remove_branch(c, newl);
-            component_insert_branch(c, merge);
-            b = merge;
-        } else {
-            b = newl;
-        }
+        b = newl;
     } else {
         b = branch_new(i, i+1, c->size);
         component_insert_branch(c, b);
