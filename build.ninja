@@ -1,8 +1,6 @@
 builddir = out
 
-dbg = -fsanitize=address,integer,undefined -fprofile-instr-generate -fcoverage-mapping
-
-cc   = clang
+cc   = clang -fsanitize=address,integer,undefined
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -18,17 +16,17 @@ rule link
     command = $cc $in -o $out
 
 rule run
-    command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
+    command = ./$in > $out
 
-build out/ecs_dbg.o:   compile  ecs.c
-    cc = $cc $dbg
-build out/ecs_test.o:  compile  ecs_test.c
-    cc = $cc $dbg
-build out/ecs_test:    link out/ecs_test.o out/ecs_dbg.o
-    cc = $cc $dbg
-build out/ecs_test.ok: run  out/ecs_test
-    cc = $cc $dbg
+build out/ecs.o:        compile ecs.c
+build out/ecs_bench.o:  compile ecs_bench.c
+build out/ecs_test.o:   compile ecs_test.c
+build out/index.o:      compile index.c
+build out/index_test.o: compile index_test.c
 
-build out/ecs_bench.o: compile ecs_bench.c
-build out/ecs_opt.o:   compile ecs.c
-build out/ecs_bench:   link out/ecs_bench.o out/ecs_opt.o
+build out/ecs_bench:  link out/ecs_bench.o out/ecs.o
+build out/ecs_test:   link out/ecs_test.o out/ecs.o
+build out/index_test: link out/index_test.o out/index.o
+
+build out/ecs_test.ok:   run out/ecs_test
+build out/index_test.ok: run out/index_test
