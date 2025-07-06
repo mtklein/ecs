@@ -6,12 +6,15 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void table_set(struct table *t, int key, void const *val) {
-    if (t->max_key < key || t->n == 0) {
-        t->max_key = key;
+static int max(int x, int y) {
+    return x>y ? x : y;
+}
 
-        int *sparse = malloc((size_t)(t->max_key+1) * sizeof *t->sparse);
-        for (int i = 0; i <= t->max_key; i++) {
+void table_set(struct table *t, int key, void const *val) {
+    if (t->slots <= key) {
+        t->slots = max(key+1, 2*t->slots);
+        int *sparse = malloc((size_t)t->slots * sizeof *t->sparse);
+        for (int i = 0; i < t->slots; i++) {
             sparse[i] = ~0;
         }
         for (int ix = 0; ix < t->n; ix++) {
@@ -34,12 +37,12 @@ void table_set(struct table *t, int key, void const *val) {
 }
 
 void table_drop(struct table *t, int key) {
-    int const ix = key <= t->max_key ? t->sparse[key] : ~0;
+    int const ix = key < t->slots ? t->sparse[key] : ~0;
     if (ix != ~0) {
         t->sparse[key] = ~0;
-        int const back_ix  = --t->n,
-                  back_key = t->dense[back_ix];
+        int const back_ix  = --t->n;
         if (ix != back_ix) {
+            int const back_key = t->dense[back_ix];
             t->dense[ix] = back_key;
             t->sparse[back_key] = ix;
             memcpy((char      *)t->data + (size_t)     ix * t->size,
@@ -49,7 +52,7 @@ void table_drop(struct table *t, int key) {
 }
 
 void* table_get(struct table const *t, int key) {
-    if (key <= t->max_key) {
+    if (key < t->slots) {
         int const ix = t->sparse[key];
         if (ix != ~0) {
             return (char*)t->data + (size_t)ix * t->size;

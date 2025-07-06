@@ -5,7 +5,7 @@
 struct table {
     size_t size;
     void  *data;
-    int    n,max_key;
+    int    n,slots;
     int   *dense;
     int   *sparse;
 };
