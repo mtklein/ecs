@@ -6,11 +6,11 @@ static _Bool is_pow2_or_zero(int x) {
 }
 
 int index_insert(struct index *ix, int key) {
-    if (ix->max < key) {
-        ix->max = key;
+    if (ix->max_key < key) {
+        ix->max_key = key;
 
-        int *sparse = malloc((size_t)(ix->max+1) * sizeof *ix->sparse);
-        for (int i = 0; i <= ix->max; i++) {
+        int *sparse = malloc((size_t)(ix->max_key+1) * sizeof *ix->sparse);
+        for (int i = 0; i <= ix->max_key; i++) {
             sparse[i] = ~0;
         }
         for (int val = 0; val < ix->vals; val++) {
@@ -44,5 +44,5 @@ void index_remove(struct index *ix, int key) {
 }
 
 int index_lookup(struct index const *ix, int key) {
-    return key <= ix->max ? ix->sparse[key] : ~0;
+    return key <= ix->max_key ? ix->sparse[key] : ~0;
 }

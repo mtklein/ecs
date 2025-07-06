@@ -3,7 +3,7 @@
 struct index {
     int *sparse;
     int *dense;
-    int  vals,max;
+    int  vals, max_key;
 };
 
 int  index_insert(struct index       *index, int key);
