@@ -97,6 +97,22 @@ static void test_drop_end(void) {
     component_free(&drop_end);
 }
 
+static void test_drop_front(void) {
+    struct component c = {.size = sizeof(int)};
+    for (int i = 1; i <= 3; ++i) {
+        int *val = component_data(&c, i);
+        *val = i;
+    }
+    component_drop(&c, 1);
+    expect(component_find(&c, 1) == NULL);
+    for (int i = 2; i <= 3; ++i) {
+        int *val = component_find(&c, i);
+        expect(val != NULL);
+        expect(*val == i);
+    }
+    component_free(&c);
+}
+
 static void test_merge(void) {
     struct component merge = {.size = sizeof(int)};
     int *v1 = component_data(&merge, 1);
@@ -237,6 +253,7 @@ int main(void) {
     test_int_component();
     test_tag_component();
     test_drop_end();
+    test_drop_front();
     test_merge();
     test_rotate_left();
     test_rotate_right();
