@@ -241,40 +241,30 @@ void component_drop(struct component *c, int i) {
             return;
         }
 
+        if (b->begin != i && b->end != i+1) {
+            struct branch *L = branch_new(b->begin, i, c->size, 0);
+            struct branch *R = branch_new(i+1, b->end, c->size, 0);
+            memcpy(L->data, branch_ptr(b,c->size,b->begin), (size_t)(i  -  b->begin) * c->size);
+            memcpy(R->data, branch_ptr(b,c->size,     i+1), (size_t)(b->end - (i+1)) * c->size);
+            component_remove_branch(c, b);
+            component_insert_branch(c, L);
+            component_insert_branch(c, R);
+            return;
+        }
+
         if (b->begin == i) {
-            memmove(b->data,
-                    branch_ptr(b, c->size, i+1),
-                    (size_t)(b->end - (i+1)) * c->size);
             b->begin += 1;
-            if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
-                struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
-                memcpy(shrunk->data,
-                       b->data,
-                       (size_t)(b->end - b->begin) * c->size);
-                component_remove_branch(c, b);
-                component_insert_branch(c, shrunk);
-            }
-            return;
-        }
-
-        if (b->end == i+1) {
+            memmove(b->data, b->data + c->size, (size_t)(b->end - (i+1)) * c->size);
+        } else if (b->end == i+1) {
             b->end -= 1;
-            if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
-                struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
-                memcpy(shrunk->data, b->data, (size_t)(b->end - b->begin) * c->size);
-                component_remove_branch(c, b);
-                component_insert_branch(c, shrunk);
-            }
-            return;
         }
 
-        struct branch *L = branch_new(b->begin, i, c->size, 0);
-        struct branch *R = branch_new(i+1, b->end, c->size, 0);
-        memcpy(L->data, branch_ptr(b,c->size,b->begin), (size_t)(i  -  b->begin) * c->size);
-        memcpy(R->data, branch_ptr(b,c->size,     i+1), (size_t)(b->end - (i+1)) * c->size);
-        component_remove_branch(c, b);
-        component_insert_branch(c, L);
-        component_insert_branch(c, R);
+        if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
+            struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
+            memcpy(shrunk->data, b->data, (size_t)(b->end - b->begin) * c->size);
+            component_remove_branch(c, b);
+            component_insert_branch(c, shrunk);
+        }
     }
 }
 
