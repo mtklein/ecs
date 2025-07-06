@@ -22,13 +22,17 @@ void table_set(struct table *t, int key, void const *val) {
     if (is_pow2_or_zero(t->n)) {
         size_t const cap = t->n ? 2*(size_t)t->n : 1;
         t->key  = realloc(t-> key, cap * sizeof *t->key);
-        t->data = realloc(t->data, cap * t->size);
+        if (t->size) {
+            t->data = realloc(t->data, cap * t->size);
+        }
     }
 
     int const ix = t->n++;
     t->key[ix] = key;
     t->ix[key] = ix;
-    memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    if (t->size) {
+        memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    }
 }
 
 void table_del(struct table *t, int key) {
@@ -40,8 +44,11 @@ void table_del(struct table *t, int key) {
         if (ix != back_ix) {
             t->key[ix] = back_key;
             t->ix[back_key] = ix;
-            memcpy((char      *)t->data + (size_t)     ix * t->size,
-                   (char const*)t->data + (size_t)back_ix * t->size, t->size);
+            if (t->size) {
+                memcpy((char      *)t->data + (size_t)     ix * t->size,
+                       (char const*)t->data + (size_t)back_ix * t->size,
+                       t->size);
+            }
         }
     }
 }
@@ -50,7 +57,7 @@ void* table_get(struct table const *t, int key) {
     if (key < t->slots) {
         int const ix = t->ix[key];
         if (ix != ~0) {
-            return (char*)t->data + (size_t)ix * t->size;
+            return t->size ? (char*)t->data + (size_t)ix * t->size : t->data;
         }
     }
     return NULL;
