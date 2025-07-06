@@ -18,6 +18,20 @@ int main(void) {
     expect(~0 == index_lookup(&index, 23));
     expect(~0 == index_lookup(&index, 51));
 
+    index_remove(&index, 42);
+    expect(~0 == index_lookup(&index, 42));
+    expect(1 == index_lookup(&index, 50));
+    expect(0 == index_lookup(&index, 47));
+    expect(2 == index_lookup(&index, 48));
+
+    index_remove(&index, 42);
+    expect(~0 == index_lookup(&index, 42));
+
+    index_remove(&index, 48);
+    expect(~0 == index_lookup(&index, 48));
+    expect(0 == index_lookup(&index, 47));
+    expect(1 == index_lookup(&index, 50));
+
     free(index.sparse);
     free(index.dense);
     return 0;
