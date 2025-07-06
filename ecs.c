@@ -181,51 +181,51 @@ void* component_find(struct component const *c, int i) {
 }
 
 void* component_data(struct component *c, int i) {
-    struct branch *b = branch_find(c->root, i);
-    if (b) {
-        return branch_ptr(b, c->size, i);
+    for (void *data = component_find(c,i); data;) {
+        return data;
     }
 
     struct branch *pred = branch_find_lt(c->root, i),
                   *succ = branch_find_gt(c->root, i);
 
-    if (pred && succ && i == pred->end && i + 1 == succ->begin) {
-        int const l_len = pred->end - pred->begin,
-                  r_len = succ->end - succ->begin;
+    if (pred && i   == pred->end &&
+        succ && i+1 == succ->begin) {
+        int const p_len = pred->end - pred->begin,
+                  s_len = succ->end - succ->begin;
         struct branch *merge = branch_new(pred->begin, succ->end, c->size, 0);
-        memcpy(merge->data, pred->data, (size_t)l_len * c->size);
-        memcpy(merge->data + (size_t)(l_len + 1) * c->size,
-               succ->data,
-               (size_t)r_len * c->size);
+        memcpy(merge->data                              , pred->data, (size_t)p_len * c->size);
+        memcpy(merge->data + (size_t)(p_len+1) * c->size, succ->data, (size_t)s_len * c->size);
         component_remove_branch(c, pred);
         component_remove_branch(c, succ);
         component_insert_branch(c, merge);
-        b = merge;
-    } else if (pred && i == pred->end) {
+        return branch_ptr(merge, c->size, i);
+    }
+
+    if (pred && i == pred->end) {
         int const len = pred->end - pred->begin;
         if (len < pred->cap) {
             pred->end += 1;
-            b = pred;
         } else {
-            struct branch *newl = branch_new(pred->begin, pred->end + 1, c->size, pred->cap * 2);
-            memcpy(newl->data, pred->data, (size_t)len * c->size);
+            struct branch *grown = branch_new(pred->begin, i+1, c->size, 2*pred->cap);
+            memcpy(grown->data, pred->data, (size_t)len * c->size);
             component_remove_branch(c, pred);
-            component_insert_branch(c, newl);
-            b = newl;
+            component_insert_branch(c, grown);
+            pred = grown;
         }
-    } else if (succ && i + 1 == succ->begin) {
-        struct branch *newl = branch_new(i, succ->end, c->size, 0);
-        memcpy(newl->data + (size_t)(succ->begin - newl->begin) * c->size,
-               succ->data,
-               (size_t)(succ->end - succ->begin) * c->size);
-        component_remove_branch(c, succ);
-        component_insert_branch(c, newl);
-        b = newl;
-    } else {
-        b = branch_new(i, i + 1, c->size, 1);
-        component_insert_branch(c, b);
+        return branch_ptr(pred, c->size, i);
     }
-    return branch_ptr(b, c->size, i);
+
+    if (succ && i+1 == succ->begin) {
+        int const len = succ->end - succ->begin;
+        // TODO: insert into succ directly with memmove() when there's enough cap.
+        struct branch *grown = branch_new(i, succ->end, c->size, 0);
+        memcpy(grown->data + c->size, succ->data, (size_t)len * c->size);
+        component_remove_branch(c, succ);
+        component_insert_branch(c, grown);
+        return grown->data;
+    }
+
+    return component_insert_branch(c, branch_new(i,i+1,c->size,1))->data;
 }
 
 void component_drop(struct component *c, int i) {
