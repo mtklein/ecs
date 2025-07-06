@@ -1,0 +1,450 @@
+/workspace/ecs/ecs.c:
+    1|       |#include "ecs.h"
+    2|       |#include <stdlib.h>
+    3|       |#include <string.h>
+    4|       |
+    5|       |struct branch {
+    6|       |    struct branch *L,*R;
+    7|       |    int  height;
+    8|       |    int  begin,end;
+    9|       |    int  :32;
+   10|       |    char data[];
+   11|       |};
+   12|       |
+   13|    108|static int height(struct branch *b) {
+   14|    108|    return b ? b->height : 0;
+   15|    108|}
+   16|       |
+   17|     28|static int max(int x, int y) {
+   18|     28|    return x>y ? x : y;
+   19|     28|}
+   20|       |
+   21|     28|static void recalculate_height(struct branch *b) {
+   22|     28|    b->height = 1 + max(height(b->L),
+   23|     28|                        height(b->R));
+   24|     28|}
+   25|       |
+   26|      1|static struct branch* rotate_right(struct branch *y) {
+   27|      1|    struct branch *x = y->L;
+   28|      1|    y->L = x->R;
+   29|      1|    x->R = y;
+   30|      1|    recalculate_height(y);
+   31|      1|    recalculate_height(x);
+   32|      1|    return x;
+   33|      1|}
+   34|       |
+   35|      1|static struct branch* rotate_left(struct branch *x) {
+   36|      1|    struct branch *y = x->R;
+   37|      1|    x->R = y->L;
+   38|      1|    y->L = x;
+   39|      1|    recalculate_height(x);
+   40|      1|    recalculate_height(y);
+   41|      1|    return y;
+   42|      1|}
+   43|       |
+   44|     24|static struct branch* rebalance(struct branch *b) {
+   45|     24|    recalculate_height(b);
+   46|     24|    int const bal = height(b->L) - height(b->R);
+   47|     24|    if (bal > 1) {
+   48|      1|        if (height(b->L->R) > height(b->L->L)) {
+   49|      0|            b->L = rotate_left(b->L);
+   50|      0|        }
+   51|      1|        return rotate_right(b);
+   52|      1|    }
+   53|     23|    if (bal < -1) {
+   54|      1|        if (height(b->R->L) > height(b->R->R)) {
+   55|      0|            b->R = rotate_right(b->R);
+   56|      0|        }
+   57|      1|        return rotate_left(b);
+   58|      1|    }
+   59|     22|    return b;
+   60|     23|}
+   61|       |
+   62|     52|static struct branch* avl_insert(struct branch *root, struct branch *node) {
+   63|     52|    if (root) {
+   64|     13|        if (node->begin < root->begin) {
+   65|      6|            root->L = avl_insert(root->L, node);
+   66|      7|        } else {
+   67|      7|            root->R = avl_insert(root->R, node);
+   68|      7|        }
+   69|     13|        return rebalance(root);
+   70|     13|    }
+   71|     39|    return node;
+   72|     52|}
+   73|       |
+   74|      5|static struct branch* avl_remove_min(struct branch *b, struct branch **out) {
+   75|      5|    if (b->L) {
+   76|      0|        b->L = avl_remove_min(b->L, out);
+   77|      0|        return rebalance(b);
+   78|      0|    }
+   79|      5|    *out = b;
+   80|      5|    return b->R;
+   81|      5|}
+   82|       |
+   83|     45|static struct branch* avl_remove(struct branch *root, int key) {
+   84|     45|    if (root) {
+   85|     45|        if (key < root->begin) {
+   86|      5|            root->L = avl_remove(root->L, key);
+   87|     40|        } else if (key > root->begin) {
+   88|      1|            root->R = avl_remove(root->R, key);
+   89|     39|        } else {
+   90|     39|            struct branch *L_subtree = root->L,
+   91|     39|                          *R_subtree = root->R;
+   92|     39|            if (R_subtree) {
+   93|      5|                struct branch *min;
+   94|      5|                R_subtree = avl_remove_min(R_subtree, &min);
+   95|      5|                min->L = L_subtree;
+   96|      5|                min->R = R_subtree;
+   97|      5|                return rebalance(min);
+   98|      5|            }
+   99|     34|            return L_subtree;
+  100|     39|        }
+  101|      6|        return rebalance(root);
+  102|     45|    }
+  103|      0|    return NULL;
+  104|     45|}
+  105|       |
+  106|     76|static struct branch* branch_find(struct branch *root, int i) {
+  107|    117|    while (root) {
+  108|     83|        if (i < root->begin) {
+  109|     16|            root = root->L;
+  110|     67|        } else if (i >= root->end) {
+  111|     25|            root = root->R;
+  112|     42|        } else {
+  113|     42|            return root;
+  114|     42|        }
+  115|     83|    }
+  116|     34|    return NULL;
+  117|     76|}
+  118|       |
+  119|     24|static struct branch* branch_find_lt(struct branch *root, int i) {
+  120|     24|    struct branch *best = NULL;
+  121|     46|    while (root) {
+  122|     22|        if (i <= root->begin) {
+  123|      4|            root = root->L;
+  124|     18|        } else {
+  125|     18|            best = root;
+  126|     18|            root = root->R;
+  127|     18|        }
+  128|     22|    }
+  129|     24|    return best;
+  130|     24|}
+  131|       |
+  132|     24|static struct branch* branch_find_gt(struct branch *root, int i) {
+  133|     24|    struct branch *best = NULL;
+  134|     46|    while (root) {
+  135|     22|        if (i < root->begin) {
+  136|      4|            best = root;
+  137|      4|            root = root->L;
+  138|     18|        } else {
+  139|     18|            root = root->R;
+  140|     18|        }
+  141|     22|    }
+  142|     24|    return best;
+  143|     24|}
+  144|       |
+  145|     39|static struct branch* branch_new(int begin, int end, size_t size) {
+  146|     39|    struct branch *b = calloc(1, sizeof *b + (size_t)(end - begin) * size);
+  147|     39|    b->height = 1;
+  148|     39|    b->begin  = begin;
+  149|     39|    b->end    = end;
+  150|     39|    return b;
+  151|     39|}
+  152|       |
+  153|     44|static void* branch_ptr(struct branch *b, size_t size, int i) {
+  154|     44|    return b->data + (size_t)(i - b->begin) * size;
+  155|     44|}
+  156|       |
+  157|     39|static struct branch* component_insert_branch(struct component *c, struct branch *branch) {
+  158|     39|    c->root = avl_insert(c->root, branch);
+  159|     39|    return branch;
+  160|     39|}
+  161|       |
+  162|     39|static void component_remove_branch(struct component *c, struct branch *branch) {
+  163|     39|    c->root = avl_remove(c->root, branch->begin);
+  164|     39|    free(branch);
+  165|     39|}
+  166|       |
+  167|     25|void* component_find(struct component const *c, int i) {
+  168|     25|    struct branch *b = branch_find(c->root, i);
+  169|     25|    return b ? branch_ptr(b, c->size, i) : NULL;
+  170|     25|}
+  171|       |
+  172|     25|void* component_data(struct component *c, int i) {
+  173|     25|    struct branch *b = branch_find(c->root, i);
+  174|     25|    if (b) {
+  175|      1|        return branch_ptr(b, c->size, i);
+  176|      1|    }
+  177|       |
+  178|     24|    struct branch *pred = branch_find_lt(c->root, i),
+  179|     24|                  *succ = branch_find_gt(c->root, i);
+  180|       |
+  181|     24|    if (pred && i == pred->end) {
+  182|     13|        struct branch *newl = branch_new(pred->begin, pred->end + 1, c->size);
+  183|     13|        memcpy(newl->data, pred->data, (size_t)(pred->end - pred->begin) * c->size);
+  184|     13|        component_remove_branch(c, pred);
+  185|     13|        component_insert_branch(c, newl);
+  186|     13|        if (succ && succ->begin == newl->end) {
+  187|      1|            struct branch *merge = branch_new(newl->begin, succ->end, c->size);
+  188|      1|            memcpy(merge->data, newl->data, (size_t)(newl->end - newl->begin) * c->size);
+  189|      1|            memcpy(merge->data + (size_t)(succ->begin - newl->begin) * c->size,
+  190|      1|                   succ->data,
+  191|      1|                   (size_t)(succ->end - succ->begin) * c->size);
+  192|      1|            component_remove_branch(c, newl);
+  193|      1|            component_remove_branch(c, succ);
+  194|      1|            component_insert_branch(c, merge);
+  195|      1|            b = merge;
+  196|     12|        } else {
+  197|     12|            b = newl;
+  198|     12|        }
+  199|     13|    } else if (succ && i+1 == succ->begin) {
+  200|      0|        struct branch *newl = branch_new(i, succ->end, c->size);
+  201|      0|        memcpy(newl->data + (size_t)(succ->begin - newl->begin) * c->size,
+  202|      0|               succ->data,
+  203|      0|               (size_t)(succ->end - succ->begin) * c->size);
+  204|      0|        component_remove_branch(c, succ);
+  205|      0|        component_insert_branch(c, newl);
+  206|      0|        if (pred && pred->end == newl->begin) {
+  207|      0|            struct branch *merge = branch_new(pred->begin, newl->end, c->size);
+  208|      0|            memcpy(merge->data,
+  209|      0|                   pred->data,
+  210|      0|                   (size_t)(pred->end - pred->begin) * c->size);
+  211|      0|            memcpy(merge->data + (size_t)(newl->begin - pred->begin) * c->size,
+  212|      0|                   newl->data,
+  213|      0|                   (size_t)(newl->end - newl->begin) * c->size);
+  214|      0|            component_remove_branch(c, pred);
+  215|      0|            component_remove_branch(c, newl);
+  216|      0|            component_insert_branch(c, merge);
+  217|      0|            b = merge;
+  218|      0|        } else {
+  219|      0|            b = newl;
+  220|      0|        }
+  221|     11|    } else {
+  222|     11|        b = branch_new(i, i+1, c->size);
+  223|     11|        component_insert_branch(c, b);
+  224|     11|    }
+  225|     24|    return branch_ptr(b, c->size, i);
+  226|     25|}
+  227|       |
+  228|     26|void component_drop(struct component *c, int i) {
+  229|     26|    struct branch *b = branch_find(c->root, i);
+  230|     26|    if (b) {
+  231|     24|        if (b->begin == i && b->end == i+1) {
+  232|     12|            component_remove_branch(c, b);
+  233|     12|            return;
+  234|     12|        }
+  235|       |
+  236|     12|        if (i == b->begin) {
+  237|      9|            struct branch *newl = branch_new(i+1, b->end, c->size);
+  238|      9|            memcpy(newl->data, b->data + c->size, (size_t)(b->end - b->begin - 1) * c->size);
+  239|      9|            component_remove_branch(c, b);
+  240|      9|            component_insert_branch(c, newl);
+  241|      9|            return;
+  242|      9|        }
+  243|       |
+  244|      3|        if (i == b->end - 1) {
+  245|      1|            struct branch *newl = branch_new(b->begin, b->end - 1, c->size);
+  246|      1|            memcpy(newl->data, b->data, (size_t)(b->end - b->begin - 1) * c->size);
+  247|      1|            component_remove_branch(c, b);
+  248|      1|            component_insert_branch(c, newl);
+  249|      1|            return;
+  250|      1|        }
+  251|       |
+  252|      2|        struct branch *R = branch_new(i+1, b->end, c->size);
+  253|      2|        memcpy(R->data, branch_ptr(b, c->size, i+1), (size_t)(b->end - (i+1)) * c->size);
+  254|      2|        struct branch *L = branch_new(b->begin, i, c->size);
+  255|      2|        memcpy(L->data, b->data, (size_t)(i - b->begin) * c->size);
+  256|      2|        component_remove_branch(c, b);
+  257|      2|        component_insert_branch(c, L);
+  258|      2|        component_insert_branch(c, R);
+  259|      2|    }
+  260|     26|}
+  261|       |
+  262|     19|static void each_branch(struct branch *b, void (*fn)(int, void*, void*), void *ctx, size_t size) {
+  263|     19|    if (b) {
+  264|      7|        each_branch(b->L, fn, ctx, size);
+  265|     30|        for (int i = b->begin; i < b->end; i++) {
+  266|     23|            fn(i, b->data + (size_t)(i - b->begin) * size, ctx);
+  267|     23|        }
+  268|      7|        each_branch(b->R, fn, ctx, size);
+  269|      7|    }
+  270|     19|}
+  271|       |
+  272|      5|void component_each(struct component const *c, void (*fn)(int, void *data, void *ctx), void *ctx) {
+  273|      5|    each_branch(c->root, fn, ctx, c->size);
+  274|      5|}
+
+/workspace/ecs/ecs_test.c:
+    1|       |#include "ecs.h"
+    2|       |#include "test.h"
+    3|       |
+    4|     14|static void sum_fn(int entity, void *data, void *ctx) {
+    5|     14|    (void)entity;
+    6|     14|    int const *val = data;
+    7|     14|    int       *sum = ctx;
+    8|     14|    *sum += *val;
+    9|     14|}
+   10|       |
+   11|      9|static void count_fn(int entity, void *data, void *ctx) {
+   12|      9|    (void)entity;
+   13|      9|    (void)data;
+   14|      9|    int *count = ctx;
+   15|      9|    *count += 1;
+   16|      9|}
+   17|       |
+   18|      1|static void int_component_test(void) {
+   19|      1|    struct component c = {.size = sizeof(int)};
+   20|       |
+   21|      6|    for (int i = 1; i <= 5; ++i) {
+   22|      5|        int *val = component_data(&c, i);
+   23|      5|        *val = i * 10;
+   24|      5|    }
+   25|       |
+   26|      1|    expect(component_find(&c, 0) == NULL);
+   27|      6|    for (int i = 1; i <= 5; ++i) {
+   28|      5|        int *val = component_find(&c, i);
+   29|      5|        expect(val != NULL);
+   30|      5|        expect(*val == i * 10);
+   31|      5|    }
+   32|      1|    expect(component_find(&c, 6) == NULL);
+   33|       |
+   34|      1|    {
+   35|      1|        int *val = component_data(&c, 3);
+   36|      1|        expect(*val == 30);
+   37|      1|    }
+   38|       |
+   39|      1|    {
+   40|      1|        int sum = 0;
+   41|      1|        component_each(&c, sum_fn, &sum);
+   42|      1|        expect(sum == 150);
+   43|      1|    }
+   44|       |
+   45|      1|    component_drop(&c, 3);
+   46|      1|    expect(component_find(&c, 3) == NULL);
+   47|      1|    {
+   48|      1|        int sum = 0;
+   49|      1|        component_each(&c, sum_fn, &sum);
+   50|      1|        expect(sum == 120);
+   51|      1|    }
+   52|       |
+   53|      6|    for (int i = 1; i <= 5; ++i) {
+   54|      5|        component_drop(&c, i);
+   55|      5|    }
+   56|      1|    expect(c.root == NULL);
+   57|      1|}
+   58|       |
+   59|      1|static void tag_component_test(void) {
+   60|      1|    struct component tag = {.size = 0};
+   61|       |
+   62|      6|    for (int i = 1; i <= 5; ++i) {
+   63|      5|        void *p = component_data(&tag, i);
+   64|      5|        expect(p != NULL);
+   65|      5|    }
+   66|       |
+   67|      1|    expect(component_find(&tag, 0) == NULL);
+   68|      6|    for (int i = 1; i <= 5; ++i) {
+   69|      5|        expect(component_find(&tag, i) != NULL);
+   70|      5|    }
+   71|      1|    expect(component_find(&tag, 6) == NULL);
+   72|       |
+   73|      1|    {
+   74|      1|        int count = 0;
+   75|      1|        component_each(&tag, count_fn, &count);
+   76|      1|        expect(count == 5);
+   77|      1|    }
+   78|       |
+   79|      1|    component_drop(&tag, 3);
+   80|      1|    expect(component_find(&tag, 3) == NULL);
+   81|      1|    {
+   82|      1|        int count = 0;
+   83|      1|        component_each(&tag, count_fn, &count);
+   84|      1|        expect(count == 4);
+   85|      1|    }
+   86|       |
+   87|      6|    for (int i = 1; i <= 5; ++i) {
+   88|      5|        component_drop(&tag, i);
+   89|      5|    }
+   90|      1|    expect(tag.root == NULL);
+   91|      1|    expect(component_find(&tag, 1) == NULL);
+   92|      1|}
+   93|       |
+   94|      1|static void drop_end_test(void) {
+   95|      1|    struct component drop_end = {.size = sizeof(int)};
+   96|      4|    for (int i = 1; i <= 3; ++i) {
+   97|      3|        int *val = component_data(&drop_end, i);
+   98|      3|        *val = i;
+   99|      3|    }
+  100|      1|    component_drop(&drop_end, 3);
+  101|      1|    expect(component_find(&drop_end, 3) == NULL);
+  102|      1|    expect(component_find(&drop_end, 2) != NULL);
+  103|      3|    for (int i = 1; i <= 2; ++i) {
+  104|      2|        component_drop(&drop_end, i);
+  105|      2|    }
+  106|       |
+  107|      1|}
+  108|       |
+  109|      1|static void merge_test(void) {
+  110|      1|    struct component merge = {.size = sizeof(int)};
+  111|      1|    int *v1 = component_data(&merge, 1);
+  112|      1|    *v1 = 1;
+  113|      1|    int *v2 = component_data(&merge, 2);
+  114|      1|    *v2 = 2;
+  115|      1|    int *v4 = component_data(&merge, 4);
+  116|      1|    *v4 = 4;
+  117|      1|    int *v5 = component_data(&merge, 5);
+  118|      1|    *v5 = 5;
+  119|      1|    int *v3 = component_data(&merge, 3);
+  120|      1|    *v3 = 3;
+  121|      1|    int sum = 0;
+  122|      1|    component_each(&merge, sum_fn, &sum);
+  123|      1|    expect(sum == 15);
+  124|      6|    for (int i = 1; i <= 5; ++i) {
+  125|      5|        component_drop(&merge, i);
+  126|      5|    }
+  127|      1|}
+  128|       |
+  129|      1|static void rotate_left_test(void) {
+  130|      1|    struct component rot_l = {.size = 0};
+  131|      1|    component_data(&rot_l, 30);
+  132|      1|    component_data(&rot_l, 20);
+  133|      1|    component_data(&rot_l, 10);
+  134|      1|    expect(component_find(&rot_l, 10) != NULL);
+  135|      1|    expect(component_find(&rot_l, 20) != NULL);
+  136|      1|    expect(component_find(&rot_l, 30) != NULL);
+  137|      1|    component_drop(&rot_l, 10);
+  138|      1|    component_drop(&rot_l, 20);
+  139|      1|    component_drop(&rot_l, 30);
+  140|      1|}
+  141|       |
+  142|      1|static void rotate_right_test(void) {
+  143|      1|    struct component rot_r = {.size = 0};
+  144|      1|    component_data(&rot_r, 10);
+  145|      1|    component_data(&rot_r, 20);
+  146|      1|    component_data(&rot_r, 30);
+  147|      1|    expect(component_find(&rot_r, 10) != NULL);
+  148|      1|    expect(component_find(&rot_r, 20) != NULL);
+  149|      1|    expect(component_find(&rot_r, 30) != NULL);
+  150|      1|    component_drop(&rot_r, 10);
+  151|      1|    component_drop(&rot_r, 20);
+  152|      1|    component_drop(&rot_r, 30);
+  153|      1|}
+  154|       |
+  155|      1|int main(void) {
+  156|      1|    int_component_test();
+  157|      1|    tag_component_test();
+  158|      1|    drop_end_test();
+  159|      1|    merge_test();
+  160|      1|    rotate_left_test();
+  161|      1|    rotate_right_test();
+  162|      1|    return 0;
+  163|      1|}
+
+/workspace/ecs/test.h:
+    1|       |#pragma once
+    2|       |
+    3|       |#include <stdio.h>
+    4|       |
+    5|     43|#define expect(x) if (!(x)) fprintf(stderr, "%s:%d expect(%s)\n", __FILE__, __LINE__, #x), \
+    6|      0|                            __builtin_debugtrap()
+    7|       |#define TODO(x) expect(!(x))
+

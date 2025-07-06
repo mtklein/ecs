@@ -18,7 +18,11 @@ rule link
 rule run
     command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
 
+rule coverage
+    command = llvm-profdata merge -sparse $in.profraw -o $in.profdata && llvm-cov show $in -instr-profile=$in.profdata > $out
+
 build out/ecs.o:       compile  ecs.c
 build out/ecs_test.o:  compile  ecs_test.c
 build out/ecs_test:    link out/ecs_test.o out/ecs.o
 build out/ecs_test.ok: run  out/ecs_test
+build coverage.txt:    coverage out/ecs_test | out/ecs_test.ok
