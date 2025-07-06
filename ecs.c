@@ -165,6 +165,14 @@ static void* branch_ptr(struct branch *b, size_t size, int i) {
     return b->data + (size_t)(i - b->begin) * size;
 }
 
+static void branch_copy(struct branch *dst, struct branch const *src, size_t size,
+                        int begin, int end) {
+    memcpy(dst->data,
+           src->data + (size_t)(begin - src->begin) * size,
+           (size_t)(end - begin) * size);
+}
+
+
 static struct branch* component_insert_branch(struct component *c, struct branch *branch) {
     c->root = avl_insert(c->root, branch);
     return branch;
@@ -241,29 +249,29 @@ void component_drop(struct component *c, int i) {
             return;
         }
 
-        if (i == b->begin) {
-            struct branch *newl = branch_new(i+1, b->end, c->size, 0);
-            memcpy(newl->data, b->data + c->size, (size_t)(b->end - b->begin - 1) * c->size);
+        if (b->begin == i) {
+            struct branch *shrunk = branch_new(i+1, b->end, c->size, 0);
+            branch_copy(shrunk,b,c->size, b->begin+1,b->end);
             component_remove_branch(c, b);
-            component_insert_branch(c, newl);
+            component_insert_branch(c, shrunk);
             return;
         }
 
-        if (i == b->end - 1) {
+        if (b->end == i+1) {
             b->end -= 1;
             if (b->end - b->begin <= b->cap / 4 && b->cap > 1) {
-                struct branch *newl = branch_new(b->begin, b->end, c->size, b->cap/2);
-                memcpy(newl->data, b->data, (size_t)(b->end - b->begin) * c->size);
+                struct branch *shrunk = branch_new(b->begin, b->end, c->size, b->cap/2);
+                branch_copy(shrunk,b,c->size, b->begin,b->end);
                 component_remove_branch(c, b);
-                component_insert_branch(c, newl);
+                component_insert_branch(c, shrunk);
             }
             return;
         }
 
-        struct branch *R = branch_new(i+1, b->end, c->size, 0);
-        memcpy(R->data, branch_ptr(b, c->size, i+1), (size_t)(b->end - (i+1)) * c->size);
         struct branch *L = branch_new(b->begin, i, c->size, 0);
-        memcpy(L->data, b->data, (size_t)(i - b->begin) * c->size);
+        struct branch *R = branch_new(i+1, b->end, c->size, 0);
+        branch_copy(L,b,c->size, b->begin, i);
+        branch_copy(R,b,c->size, i+1, b->end);
         component_remove_branch(c, b);
         component_insert_branch(c, L);
         component_insert_branch(c, R);
