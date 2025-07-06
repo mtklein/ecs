@@ -27,7 +27,6 @@ void table_set(struct table *t, int key, void const *val) {
 
     if (is_pow2_or_zero(t->n)) {
         size_t const cap = t->n ? 2*(size_t)t->n : 1;
-        // TODO: realloc/free both of these together
         t->key  = realloc(t-> key, cap * sizeof *t->key);
         t->data = realloc(t->data, cap * t->size);
     }
