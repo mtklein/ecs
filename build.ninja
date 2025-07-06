@@ -22,3 +22,5 @@ build out/ecs.o:       compile  ecs.c
 build out/ecs_test.o:  compile  ecs_test.c
 build out/ecs_test:    link out/ecs_test.o out/ecs.o
 build out/ecs_test.ok: run  out/ecs_test
+build out/ecs_bench.o: compile ecs_bench.c
+build out/ecs_bench:   link out/ecs_bench.o out/ecs.o
