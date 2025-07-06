@@ -10,6 +10,6 @@ struct index {
     int   *sparse;
 };
 
-int  index_insert(struct index       *index, int key);
-void index_remove(struct index       *index, int key);
-int  index_lookup(struct index const *index, int key);
+void  index_insert(struct index       *index, int key, void const *val);
+void  index_remove(struct index       *index, int key);
+void* index_lookup(struct index const *index, int key);
