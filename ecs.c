@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+int component_entity_count(struct component const*);
+
 struct branch {
     struct branch *L,*R;
     int  height;
@@ -282,4 +284,25 @@ static void each_branch(struct branch *b, void (*fn)(int, void*, void*), void *c
 
 void component_each(struct component const *c, void (*fn)(int, void *data, void *ctx), void *ctx) {
     each_branch(c->root, fn, ctx, c->size);
+}
+
+static void branch_free(struct branch *b) {
+    if (b) {
+        branch_free(b->L);
+        branch_free(b->R);
+        free(b);
+    }
+}
+
+void component_free(struct component *c) {
+    branch_free(c->root);
+    c->root = NULL;
+}
+
+static int branch_entity_count(struct branch *b) {
+    return b ? branch_entity_count(b->L) + branch_entity_count(b->R) + (b->end - b->begin) : 0;
+}
+
+int component_entity_count(struct component const *c) {
+    return branch_entity_count(c->root);
 }
