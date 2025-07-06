@@ -152,6 +152,82 @@ static void test_rotate_right(void) {
     component_drop(&rot_r, 30);
 }
 
+static void test_double_rotate_lr(void) {
+    struct component t = {.size = 0};
+    component_data(&t, 30);
+    component_data(&t, 10);
+    component_data(&t, 20);
+    expect(component_find(&t, 10) != NULL);
+    expect(component_find(&t, 20) != NULL);
+    expect(component_find(&t, 30) != NULL);
+    component_drop(&t, 10);
+    component_drop(&t, 20);
+    component_drop(&t, 30);
+}
+
+static void test_double_rotate_rl(void) {
+    struct component t = {.size = 0};
+    component_data(&t, 10);
+    component_data(&t, 30);
+    component_data(&t, 20);
+    expect(component_find(&t, 10) != NULL);
+    expect(component_find(&t, 20) != NULL);
+    expect(component_find(&t, 30) != NULL);
+    component_drop(&t, 10);
+    component_drop(&t, 20);
+    component_drop(&t, 30);
+}
+
+static void test_remove_min(void) {
+    struct component c = {.size = sizeof(int)};
+    int *v20 = component_data(&c, 20);
+    *v20 = 20;
+    int *v10 = component_data(&c, 10);
+    *v10 = 10;
+    int *v30 = component_data(&c, 30);
+    *v30 = 30;
+    int *v25 = component_data(&c, 25);
+    *v25 = 25;
+    component_drop(&c, 20);
+    expect(component_find(&c, 20) == NULL);
+    expect(component_find(&c, 10) != NULL);
+    expect(component_find(&c, 25) != NULL);
+    expect(component_find(&c, 30) != NULL);
+    component_drop(&c, 10);
+    component_drop(&c, 25);
+    component_drop(&c, 30);
+}
+
+static void test_succ_no_pred(void) {
+    struct component c = {.size = sizeof(int)};
+    int *v3 = component_data(&c, 3);
+    *v3 = 3;
+    int *v2 = component_data(&c, 2);
+    *v2 = 2;
+    expect(component_find(&c, 2) != NULL);
+    expect(component_find(&c, 3) != NULL);
+    component_drop(&c, 2);
+    component_drop(&c, 3);
+    expect(c.root == NULL);
+}
+
+static void test_succ_with_pred(void) {
+    struct component c = {.size = sizeof(int)};
+    int *v1 = component_data(&c, 1);
+    *v1 = 1;
+    int *v3 = component_data(&c, 3);
+    *v3 = 3;
+    int *v2 = component_data(&c, 2);
+    *v2 = 2;
+    expect(component_find(&c, 1) != NULL);
+    expect(component_find(&c, 2) != NULL);
+    expect(component_find(&c, 3) != NULL);
+    component_drop(&c, 1);
+    component_drop(&c, 2);
+    component_drop(&c, 3);
+    expect(c.root == NULL);
+}
+
 int main(void) {
     test_int_component();
     test_tag_component();
@@ -159,5 +235,10 @@ int main(void) {
     test_merge();
     test_rotate_left();
     test_rotate_right();
+    test_double_rotate_lr();
+    test_double_rotate_rl();
+    test_remove_min();
+    test_succ_no_pred();
+    test_succ_with_pred();
     return 0;
 }
