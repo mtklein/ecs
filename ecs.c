@@ -12,17 +12,11 @@ static _Bool is_pow2_or_zero(int x) {
 
 void table_set(struct table *t, int key, void const *val) {
     if (key >= t->slots) {
-        t->slots = max(key+1, 2*t->slots);
-        // TODO: realloc here and just fill the new slots with ~0
-        int *ix_grown = malloc((size_t)t->slots * sizeof *ix_grown);
-        for (int i = 0; i < t->slots; i++) {
-            ix_grown[i] = ~0;
+        int const slots = max(key+1, 2*t->slots);
+        t->ix = realloc(t->ix, (size_t)slots * sizeof *t->ix);
+        while (t->slots < slots) {
+            t->ix[t->slots++] = ~0;
         }
-        for (int ix = 0; ix < t->n; ix++) {
-            ix_grown[t->key[ix]] = ix;
-        }
-        free(t->ix);
-        t->ix = ix_grown;
     }
 
     if (is_pow2_or_zero(t->n)) {
