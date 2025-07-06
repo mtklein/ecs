@@ -3,16 +3,21 @@
 
 static void sum_fn(int entity, void *data, void *ctx) {
     (void)entity;
-    *(int *)ctx += *(int *)data;
+    int       *sum = ctx;
+    int const *val = data;
+    *sum += *val;
 }
 
 int main(void) {
     struct component c = { .size = sizeof(int), .root = NULL };
 
-    for (int i = 1; i <= 5; ++i)
-        *(int *)component_data(&c, i) = i * 10;
+    for (int i = 1; i <= 5; ++i) {
+        int *slot = component_data(&c, i);
+        *slot = i * 10;
+    }
 
-    expect(*(int *)component_data(&c, 3) == 30);
+    int *slot = component_data(&c, 3);
+    expect(*slot == 30);
 
     int sum = 0;
     component_each(&c, sum_fn, &sum);
@@ -23,8 +28,9 @@ int main(void) {
     component_each(&c, sum_fn, &sum);
     expect(sum == 120);
 
-    for (int i = 1; i <= 5; ++i)
+    for (int i = 1; i <= 5; ++i) {
         component_drop(&c, i);
+    }
     expect(c.root == NULL);
 
     return 0;
