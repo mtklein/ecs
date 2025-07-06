@@ -45,12 +45,10 @@ static double bench_sparse(int n) {
 
 static void run(char const *name, double (*fn)(int)) {
     printf("%s\n", name);
-    printf("%8s %12s %8s %8s\n", "n", "sec", "sec/n", "sec/nlogn");
+    printf("%8s  %8s\n", "n", "sec");
     for (int n = 1024; n <= 32768/*131072*/; n *= 2) {
-        double const t = fn(n),
-                    On = t / (double)n,
-                Onlogn = t / ((double)n * log((double)n));
-        printf("%8d %12.6f %8.2e %8.2e\n", n, t, On, Onlogn);
+        double const t = fn(n);
+        printf("%8d  %8.6f\n", n, t);
     }
     printf("\n");
 }
