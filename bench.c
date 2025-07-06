@@ -13,8 +13,7 @@ static double bench_dense(int n) {
     struct component c = {.size = sizeof(int)};
     double start = now();
     for (int i = 0; i < n; ++i) {
-        int *val = component_data(&c, i);
-        *val = i;
+        component_attach(&c, i, &i);
     }
     double elapsed = now() - start;
     component_free(&c);
@@ -25,8 +24,7 @@ static double bench_dense_rev(int n) {
     struct component c = {.size = sizeof(int)};
     double start = now();
     for (int i = n - 1; i >= 0; --i) {
-        int *val = component_data(&c, i);
-        *val = i;
+        component_attach(&c, i, &i);
     }
     double elapsed = now() - start;
     component_free(&c);
@@ -38,8 +36,7 @@ static double bench_sparse(int n) {
     double start = now();
     for (int i = 0; i < n; ++i) {
         int key = i * 10;
-        int *val = component_data(&c, key);
-        *val = key;
+        component_attach(&c, key, &key);
     }
     double elapsed = now() - start;
     component_free(&c);
@@ -49,7 +46,7 @@ static double bench_sparse(int n) {
 static void run(char const *name, double (*fn)(int)) {
     printf("%s\n", name);
     printf("%8s %12s %8s %8s\n", "n", "sec", "sec/n", "sec/nlogn");
-    for (int n = 1024; n <= 131072; n *= 2) {
+    for (int n = 1024; n <= 32768/*131072*/; n *= 2) {
         double const t = fn(n),
                     On = t / (double)n,
                 Onlogn = t / ((double)n * log((double)n));
@@ -59,8 +56,8 @@ static void run(char const *name, double (*fn)(int)) {
 }
 
 int main(void) {
-    run("dense", bench_dense);
+    run("dense",     bench_dense);
     run("dense_rev", bench_dense_rev);
-    run("sparse", bench_sparse);
+    run("sparse",    bench_sparse);
     return 0;
 }

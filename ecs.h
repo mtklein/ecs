@@ -3,13 +3,14 @@
 #include <stddef.h>
 
 struct component {
-    size_t         size;
-    struct branch *root;
+    size_t size;
+    void  *data;
+    int    n, max;
+    int   *dense;
+    int   *sparse;
 };
 
-void* component_data(struct component*, int i);
-void  component_drop(struct component*, int i);
-void  component_free(struct component*);
-
-void* component_find(struct component const*, int i);
-void  component_each(struct component const*, void (*fn)(int i, void *data, void *ctx), void *ctx);
+void  component_attach(struct component      *, int entity, void const *data);
+void  component_detach(struct component      *, int entity);
+void* component_lookup(struct component const*, int entity);
+void  component_free  (struct component*);
