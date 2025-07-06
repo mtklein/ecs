@@ -33,7 +33,7 @@ int main(void) {
     }
     expect(!table_get(&t, 51));
 
-    table_drop(&t, 42);
+    table_del(&t, 42);
     expect(!table_get(&t, 42));
     {
         struct point *p = table_get(&t, 47);
@@ -48,14 +48,14 @@ int main(void) {
         expect((int)p->x == 50);
     }
 
-    table_drop(&t, 42);
+    table_del(&t, 42);
     expect(!table_get(&t, 42));
 
-    table_drop(&t, 48);
+    table_del(&t, 48);
     expect(!table_get(&t, 48));
 
     expect(!table_get(&t, 10000));
-    table_drop(&t, 10000);
+    table_del(&t, 10000);
     expect(!table_get(&t, 10000));
 
     {
@@ -71,6 +71,6 @@ int main(void) {
         printf("{%g, %g}\n", (double)p->x, (double)p->y);
     }
 
-    table_clear(&t);
+    table_reset(&t);
     return 0;
 }

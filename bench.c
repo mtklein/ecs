@@ -11,35 +11,35 @@ static double now(void) {
 
 static double bench_dense(int n) {
     struct table t = {.size = sizeof(int)};
-    double start = now();
+    double const start = now();
     for (int i = 0; i < n; ++i) {
         table_set(&t, i, &i);
     }
-    double elapsed = now() - start;
-    table_clear(&t);
+    double const elapsed = now() - start;
+    table_reset(&t);
     return elapsed;
 }
 
 static double bench_dense_rev(int n) {
     struct table t = {.size = sizeof(int)};
-    double start = now();
+    double const start = now();
     for (int i = n - 1; i >= 0; --i) {
         table_set(&t, i, &i);
     }
-    double elapsed = now() - start;
-    table_clear(&t);
+    double const elapsed = now() - start;
+    table_reset(&t);
     return elapsed;
 }
 
 static double bench_sparse(int n) {
     struct table t = {.size = sizeof(int)};
-    double start = now();
+    double const start = now();
     for (int i = 0; i < n; ++i) {
         int key = i * 10;
         table_set(&t, key, &key);
     }
-    double elapsed = now() - start;
-    table_clear(&t);
+    double const elapsed = now() - start;
+    table_reset(&t);
     return elapsed;
 }
 

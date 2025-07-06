@@ -31,7 +31,7 @@ void table_set(struct table *t, int key, void const *val) {
     memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
 }
 
-void table_drop(struct table *t, int key) {
+void table_del(struct table *t, int key) {
     int const ix = key < t->slots ? t->ix[key] : ~0;
     if (ix != ~0) {
         t->ix[key] = ~0;
@@ -56,7 +56,7 @@ void* table_get(struct table const *t, int key) {
     return NULL;
 }
 
-void table_clear(struct table *t) {
+void table_reset(struct table *t) {
     free(t->ix);
     free(t->key);
     free(t->data);
