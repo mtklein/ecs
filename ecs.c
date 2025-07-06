@@ -3,7 +3,7 @@
 #include <string.h>
 
 struct branch {
-    struct branch *left,*right;
+    struct branch *L,*R;
     int  height;
     int  begin,end;
     int  :32;
@@ -15,24 +15,24 @@ static int height(struct branch *b) {
 }
 
 static void recalculate_height(struct branch *b) {
-    int const l = height(b->left ),
-              r = height(b->right);
+    int const l = height(b->L),
+              r = height(b->R);
     b->height = (l > r ? l : r) + 1;
 }
 
 static struct branch* rotate_right(struct branch *y) {
-    struct branch *x = y->left;
-    y->left  = x->right;
-    x->right = y;
+    struct branch *x = y->L;
+    y->L  = x->R;
+    x->R = y;
     recalculate_height(y);
     recalculate_height(x);
     return x;
 }
 
 static struct branch* rotate_left(struct branch *x) {
-    struct branch *y = x->right;
-    x->right = y->left;
-    y->left  = x;
+    struct branch *y = x->R;
+    x->R = y->L;
+    y->L  = x;
     recalculate_height(x);
     recalculate_height(y);
     return y;
@@ -40,16 +40,16 @@ static struct branch* rotate_left(struct branch *x) {
 
 static struct branch* balance(struct branch *b) {
     recalculate_height(b);
-    int const bal = height(b->left) - height(b->right);
+    int const bal = height(b->L) - height(b->R);
     if (bal > 1) {
-        if (height(b->left->right) > height(b->left->left)) {
-            b->left = rotate_left(b->left);
+        if (height(b->L->R) > height(b->L->L)) {
+            b->L = rotate_left(b->L);
         }
         return rotate_right(b);
     }
     if (bal < -1) {
-        if (height(b->right->left) > height(b->right->right)) {
-            b->right = rotate_right(b->right);
+        if (height(b->R->L) > height(b->R->R)) {
+            b->R = rotate_right(b->R);
         }
         return rotate_left(b);
     }
@@ -59,9 +59,9 @@ static struct branch* balance(struct branch *b) {
 static struct branch* avl_insert(struct branch *root, struct branch *node) {
     if (root) {
         if (node->begin < root->begin) {
-            root->left = avl_insert(root->left, node);
+            root->L = avl_insert(root->L, node);
         } else {
-            root->right = avl_insert(root->right, node);
+            root->R = avl_insert(root->R, node);
         }
         return balance(root);
     }
@@ -69,31 +69,31 @@ static struct branch* avl_insert(struct branch *root, struct branch *node) {
 }
 
 static struct branch* avl_remove_min(struct branch *b, struct branch **out) {
-    if (b->left) {
-        b->left = avl_remove_min(b->left, out);
+    if (b->L) {
+        b->L = avl_remove_min(b->L, out);
         return balance(b);
     }
     *out = b;
-    return b->right;
+    return b->R;
 }
 
 static struct branch* avl_remove(struct branch *root, int key) {
     if (root) {
         if (key < root->begin) {
-            root->left = avl_remove(root->left, key);
+            root->L = avl_remove(root->L, key);
         } else if (key > root->begin) {
-            root->right = avl_remove(root->right, key);
+            root->R = avl_remove(root->R, key);
         } else {
-            struct branch *left_subtree = root->left,
-                         *right_subtree = root->right;
-            if (right_subtree) {
+            struct branch *L_subtree = root->L,
+                         *R_subtree = root->R;
+            if (R_subtree) {
                 struct branch *min;
-                right_subtree = avl_remove_min(right_subtree, &min);
-                min->left  = left_subtree;
-                min->right = right_subtree;
+                R_subtree = avl_remove_min(R_subtree, &min);
+                min->L = L_subtree;
+                min->R = R_subtree;
                 return balance(min);
             }
-            return left_subtree;
+            return L_subtree;
         }
         return balance(root);
     }
@@ -103,9 +103,9 @@ static struct branch* avl_remove(struct branch *root, int key) {
 static struct branch* branch_find(struct branch *root, int entity) {
     while (root) {
         if (entity < root->begin) {
-            root = root->left;
+            root = root->L;
         } else if (entity >= root->end) {
-            root = root->right;
+            root = root->R;
         } else {
             return root;
         }
@@ -117,10 +117,10 @@ static struct branch* branch_find_lt(struct branch *root, int entity) {
     struct branch *best = NULL;
     while (root) {
         if (entity <= root->begin) {
-            root = root->left;
+            root = root->L;
         } else {
             best = root;
-            root = root->right;
+            root = root->R;
         }
     }
     return best;
@@ -131,9 +131,9 @@ static struct branch* branch_find_gt(struct branch *root, int entity) {
     while (root) {
         if (entity < root->begin) {
             best = root;
-            root = root->left;
+            root = root->L;
         } else {
-            root = root->right;
+            root = root->R;
         }
     }
     return best;
@@ -254,11 +254,11 @@ void component_drop(struct component *c, int entity) {
 
 static void each_branch(struct branch *b, void (*fn)(int, void *, void *), void *ctx, size_t size) {
     if (b) {
-        each_branch(b->left, fn, ctx, size);
+        each_branch(b->L, fn, ctx, size);
         for (int i = b->begin; i < b->end; i++) {
             fn(i, b->data + (size_t)(i - b->begin) * size, ctx);
         }
-        each_branch(b->right, fn, ctx, size);
+        each_branch(b->R, fn, ctx, size);
     }
 }
 
