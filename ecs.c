@@ -2,13 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline void* careful_memcpy(void *dst, void const *src, size_t len) {
+static inline void* copy(void *dst, void const *src, size_t len) {
     return len ? memcpy(dst,src,len) : dst;
 }
-#if defined(memcpy)
-    #undef  memcpy
-#endif
-#define memcpy careful_memcpy
 
 static int max(int x, int y) { return x>y ? x : y; }
 
@@ -18,7 +14,7 @@ static _Bool is_pow2_or_zero(int x) {
 
 void table_set(struct table *t, int key, void const *val) {
     for (void *dst = table_get(t, key); dst;) {
-        memcpy(dst, val, t->size);
+        copy(dst, val, t->size);
         return;
     }
 
@@ -38,7 +34,7 @@ void table_set(struct table *t, int key, void const *val) {
     int const ix = t->n++;
     t->key[ix] = key;
     t->ix[key] = ix;
-    memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    copy((char*)t->data + (size_t)ix * t->size, val, t->size);
 }
 
 void table_del(struct table *t, int key) {
@@ -50,8 +46,8 @@ void table_del(struct table *t, int key) {
         if (ix != back_ix) {
             t->key[ix] = back_key;
             t->ix[back_key] = ix;
-            memcpy((char      *)t->data + (size_t)     ix * t->size,
-                   (char const*)t->data + (size_t)back_ix * t->size, t->size);
+            copy((char      *)t->data + (size_t)     ix * t->size,
+                 (char const*)t->data + (size_t)back_ix * t->size, t->size);
         }
     }
 }
@@ -85,7 +81,7 @@ _Bool table_join(struct table const *table[], int tables, int *key, void *vals) 
             if (!src) {
                 goto next_ix;
             }
-            memcpy(dst, src, table[i]->size);
+            copy(dst, src, table[i]->size);
             dst += table[i]->size;
         }
         return 1;
