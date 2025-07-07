@@ -56,7 +56,7 @@ static void run(char const *name, double (*fn)(int)) {
             if (min > t) { min = t; }
             if (max < t) { max = t; }
         }
-        printf("%8d %2d-%2d ", n, (int)(min*1e9/n), (int)(max*1e9/n));
+        printf("%8d %2d–%2d ", n, (int)(min*1e9/n), (int)(max*1e9/n));
         int i = 0;
         for (; i < (int)(min*1e9/n); i++) { printf("█"); }
         for (; i < (int)(max*1e9/n); i++) { printf("⬚"); }
