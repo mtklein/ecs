@@ -62,8 +62,8 @@ void table_reset(struct table *t) {
 }
 
 void table_join(struct table const *table[], int tables,
-                void (*cb)(int key, void* val[], void *ctx),
-                void* val[], void *ctx) {
+                void (*cb)(int key, void *vals, void *ctx),
+                void *vals, void *ctx) {
     struct table seen = {0};
     for (int i = 0; i < tables; i++) {
         struct table const *t = table[i];
@@ -71,10 +71,16 @@ void table_join(struct table const *table[], int tables,
             int const key = t->key[ix];
             if (!table_get(&seen, key)) {
                 table_set(&seen, key, NULL);
+                size_t offset = 0;
                 for (int j = 0; j < tables; j++) {
-                    val[j] = table_get(table[j], key);
+                    void *src = table_get(table[j], key);
+                    void *dst = (char *)vals + offset;
+                    size_t const sz = table[j]->size;
+                    if (src) { memcpy(dst, src, sz); }
+                    else { memset(dst, 0, sz); }
+                    offset += sz;
                 }
-                cb(key, val, ctx);
+                cb(key, vals, ctx);
             }
         }
     }

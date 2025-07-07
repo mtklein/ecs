@@ -97,13 +97,14 @@ static void test_tag_table(void) {
 struct join_row { int key,a,b,c; };
 struct join_ctx { int ix; int :32; struct join_row *row; };
 
-static void join_collect(int key, void* val[], void *ctx) {
+static void join_collect(int key, void *vals, void *ctx) {
     struct join_ctx *c = ctx;
     struct join_row *row = c->row + c->ix++;
+    int const *v = vals;
     row->key = key;
-    row->a = val[0] ? *(int*)val[0] : -1;
-    row->b = val[1] ? *(int*)val[1] : -1;
-    row->c = val[2] ? *(int*)val[2] : -1;
+    row->a = v[0];
+    row->b = v[1];
+    row->c = v[2];
 }
 
 static void test_table_join(void) {
@@ -118,14 +119,14 @@ static void test_table_join(void) {
 
     struct table const *table[] = {&a,&b,&c};
     struct join_row got[3] = {0};
-    void* val[3];
+    int vals[3];
     struct join_ctx ctx = {0,got};
-    table_join(table, 3, join_collect, val, &ctx);
+    table_join(table, 3, join_collect, vals, &ctx);
 
     expect(ctx.ix == 3);
-    expect(got[0].key == 1 && got[0].a == 10 && got[0].b == 100 && got[0].c == -1);
-    expect(got[1].key == 3 && got[1].a == 30 && got[1].b == -1 && got[1].c == 300);
-    expect(got[2].key == 2 && got[2].a == -1 && got[2].b == 200 && got[2].c == -1);
+    expect(got[0].key == 1 && got[0].a == 10 && got[0].b == 100 && got[0].c == 0);
+    expect(got[1].key == 3 && got[1].a == 30 && got[1].b == 0 && got[1].c == 300);
+    expect(got[2].key == 2 && got[2].a == 0 && got[2].b == 200 && got[2].c == 0);
 
     table_reset(&a);
     table_reset(&b);
