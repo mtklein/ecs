@@ -68,10 +68,10 @@ static double bench_join_single(int n) {
     for (int i = 0; i < n; i++) {
         table_set(&t, i, &i);
     }
-    struct table const *tables[] = {&t};
+    struct table *table[] = {&t};
     int key = ~0, val, sum = 0;
     double const start = now();
-    while (table_join(tables, len(tables), &key, &val)) {
+    while (table_join(table, len(table), &key, &val)) {
         sum += val;
     }
     sink += sum;
@@ -91,10 +91,10 @@ static double bench_join_small_large(int n) {
     for (int i = small_n; i < n; i++) {
         table_set(&large, i, &i);
     }
-    struct table const *tables[] = {&small,&large};
+    struct table *table[] = {&small,&large};
     int key = ~0, vals[2], sum = 0;
     double const start = now();
-    while (table_join(tables, len(tables), &key, vals)) {
+    while (table_join(table, len(table), &key, vals)) {
         sum += vals[0] + vals[1];
     }
     sink += sum;
@@ -115,10 +115,10 @@ static double bench_join_large_small(int n) {
     for (int i = small_n; i < n; i++) {
         table_set(&large, i, &i);
     }
-    struct table const *tables[] = {&large,&small};
+    struct table *table[] = {&large,&small};
     int key = ~0, vals[2], sum = 0;
     double const start = now();
-    while (table_join(tables, len(tables), &key, vals)) {
+    while (table_join(table, len(table), &key, vals)) {
         sum += vals[0] + vals[1];
     }
     sink += sum;

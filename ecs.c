@@ -71,10 +71,19 @@ void table_drop(struct table *t) {
     *t = (struct table){.size=t->size};
 }
 
-_Bool table_join(struct table const *table[], int tables, int *key, void *vals) {
+_Bool table_join(struct table *table[], int tables, int *key, void *vals) {
     struct table const *lead = table[0];
-    for (int ix = *key >= 0 ? 1+lead->ix[*key] : 0; ix < lead->n; ix++) {
-        *key = lead->key[ix];
+    int ix = 0;
+    if (*key >= 0) {
+        char const *src = vals;
+        for (int i = 0; i < tables; i++) {
+            copy(table_get(table[i], *key), src, table[i]->size);
+            src += table[i]->size;
+        }
+        ix = 1+lead->ix[*key];
+    }
+    while (ix < lead->n) {
+        *key = lead->key[ix++];
         char *dst = vals;
         for (int i = 0; i < tables; i++) {
             void const *src = table_get(table[i], *key);

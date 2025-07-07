@@ -108,7 +108,7 @@ static void test_join(void) {
         table_set(&tag,    i*4, NULL);
     }
 
-    struct table const *table[] = {&floats,&ints,&tag};
+    struct table *table[] = {&floats,&ints,&tag};
 
     int key = ~0;
     struct { float f; int i; } vals;
@@ -129,7 +129,7 @@ static void test_join_single(void) {
         table_set(&t, i, &i);
     }
 
-    struct table const *table[] = {&t};
+    struct table *table[] = {&t};
     int key=~0, val;
     expect( table_join(table,len(table), &key, &val) && key == 0 && val == 0);
     expect( table_join(table,len(table), &key, &val) && key == 1 && val == 1);
@@ -146,7 +146,7 @@ static void test_join_empty(void) {
     }
     struct table empty = {.size=sizeof(int)};
 
-    struct table const *table[] = {&t,&empty};
+    struct table *table[] = {&t,&empty};
     int key=~0, val;
     expect(!table_join(table,len(table), &key, &val));
 
@@ -172,6 +172,32 @@ static void test_overwrite(void) {
     table_drop(&tag);
 }
 
+static void test_join_writeback(void) {
+    struct table ints = {.size = sizeof(int)},
+               floats = {.size = sizeof(float)};
+    for (int i = 0; i < 3; i++) {
+        float f = (float)i;
+        table_set(&ints  , i, &i);
+        table_set(&floats, i, &f);
+    }
+
+    struct table *table[] = {&ints,&floats};
+    struct { int i; float f; } vals;
+    for (int key=~0; table_join(table,len(table), &key,&vals);) {
+        vals.i *= 2;
+        vals.f *= 3;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        int   *ip = table_get(&ints  , i);
+        float *fp = table_get(&floats, i);
+        expect(     *ip == i*2);
+        expect((int)*fp == i*3);
+    }
+    table_drop(&ints);
+    table_drop(&floats);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
@@ -179,5 +205,6 @@ int main(void) {
     test_join_single();
     test_join_empty();
     test_overwrite();
+    test_join_writeback();
     return 0;
 }
