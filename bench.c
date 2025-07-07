@@ -44,15 +44,22 @@ static double bench_sparse(int n) {
 }
 
 static void run(char const *name, double (*fn)(int)) {
+    int const samples = 4;
     printf("%s\n", name);
-    printf("%8s  %8s %8s\n", "n", "µs", "ns/n");
-    double t = 0;
-    for (int n = 1024; t < 0.125; n *= 2) {
-        t = fn(n);
-        printf("%8d %8.0f %8.0f ", n, t*1e6, t*1e9/n);
-        for (int i = 0; i < (int)(t*1e9/n); i++) {
-            printf("█");
+    printf("%8s %5s\n", "n", "ns/n");
+    double min = 0;
+    for (int n = 1024; min < 0.125 / samples; n *= 2) {
+        min = 1/0.0;
+        double max = -1/0.0;
+        for (int i = 0; i < samples; i++) {
+            double const t = fn(n);
+            if (min > t) { min = t; }
+            if (max < t) { max = t; }
         }
+        printf("%8d %2d-%2d ", n, (int)(min*1e9/n), (int)(max*1e9/n));
+        int i = 0;
+        for (; i < (int)(min*1e9/n); i++) { printf("█"); }
+        for (; i < (int)(max*1e9/n); i++) { printf("⬚"); }
         printf("\n");
     }
     printf("\n");
