@@ -94,8 +94,74 @@ static void test_tag_table(void) {
     table_reset(&tag);
 }
 
+static void add_sum(int key, void const *a, void const *b, void *ctx) {
+    int const *x = a;
+    int const *y = b;
+    int       *s = ctx;
+    *s += *x + *y + key;
+}
+
+static void add_sum3(int key, void const *const*vals, void *ctx) {
+    int const *x = vals[0];
+    int const *y = vals[1];
+    int const *z = vals[2];
+    int       *s = ctx;
+    *s += *x + *y + *z + key;
+}
+
+static void test_join(void) {
+    struct table a = {.size = sizeof(int)};
+    struct table b = {.size = sizeof(int)};
+
+    table_set(&a, 1, &(int){1});
+    table_set(&a, 2, &(int){2});
+    table_set(&a, 3, &(int){3});
+
+    table_set(&b, 2, &(int){20});
+    table_set(&b, 3, &(int){30});
+    table_set(&b, 4, &(int){40});
+
+    int sum = 0;
+    table_join(&a, &b, add_sum, &sum);
+
+    expect(sum == 60);
+
+    table_reset(&a);
+    table_reset(&b);
+}
+
+static void test_join_many(void) {
+    struct table a = {.size = sizeof(int)};
+    struct table b = {.size = sizeof(int)};
+    struct table c = {.size = sizeof(int)};
+
+    table_set(&a, 1, &(int){1});
+    table_set(&a, 2, &(int){2});
+    table_set(&a, 3, &(int){3});
+
+    table_set(&b, 2, &(int){20});
+    table_set(&b, 3, &(int){30});
+    table_set(&b, 4, &(int){40});
+
+    table_set(&c, 3, &(int){300});
+    table_set(&c, 4, &(int){400});
+    table_set(&c, 5, &(int){500});
+
+    struct table const *t[] = {&a, &b, &c};
+    int sum = 0;
+    table_join_many(t, 3, add_sum3, &sum);
+
+    expect(sum == 336);
+
+    table_reset(&a);
+    table_reset(&b);
+    table_reset(&c);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
+    test_join();
+    test_join_many();
     return 0;
 }

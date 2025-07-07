@@ -25,7 +25,9 @@ void table_set(struct table *t, int key, void const *val) {
     int const ix = t->n++;
     t->key[ix] = key;
     t->ix[key] = ix;
-    memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    if (t->size) {
+        memcpy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    }
 }
 
 void table_del(struct table *t, int key) {
@@ -60,4 +62,57 @@ void table_reset(struct table *t) {
         free(t->data);
     }
     *t = (struct table){.size=t->size};
+}
+
+void table_join(struct table const *a, struct table const *b,
+                join_cb *cb, void *ctx) {
+    struct table const *small = a->n <= b->n ? a : b;
+    struct table const *large = a->n <= b->n ? b : a;
+    _Bool const small_is_a = small == a;
+
+    for (int i = 0; i < small->n; i++) {
+        int const key = small->key[i];
+        int const ix  = key < large->slots ? large->ix[key] : ~0;
+        if (ix != ~0) {
+            void const *a_val = small_is_a
+                                ? (char const*)a->data + (size_t)i  * a->size
+                                : (char const*)a->data + (size_t)ix * a->size;
+            void const *b_val = small_is_a
+                                ? (char const*)b->data + (size_t)ix * b->size
+                                : (char const*)b->data + (size_t)i  * b->size;
+            cb(key, a_val, b_val, ctx);
+        }
+    }
+}
+
+void table_join_many(struct table const **tables, int count,
+                     join_many_cb *cb, void *ctx) {
+    int small_ix = 0;
+    for (int i = 1; i < count; i++) {
+        if (tables[i]->n < tables[small_ix]->n) {
+            small_ix = i;
+        }
+    }
+
+    void const **vals = malloc((size_t)count * sizeof *vals);
+    struct table const *small = tables[small_ix];
+
+    for (int i = 0; i < small->n; i++) {
+        int const key = small->key[i];
+        _Bool ok = 1;
+        for (int j = 0; j < count; j++) {
+            struct table const *t = tables[j];
+            int ix = j == small_ix ? i : (key < t->slots ? t->ix[key] : ~0);
+            if (ix == ~0) {
+                ok = 0;
+                break;
+            }
+            vals[j] = t->size ? (char const*)t->data + (size_t)ix * t->size : NULL;
+        }
+        if (ok) {
+            cb(key, vals, ctx);
+        }
+    }
+
+    free(vals);
 }
