@@ -1,6 +1,14 @@
 #include "ecs.h"
-#include "string.h"
 #include <stdlib.h>
+#include <string.h>
+
+static inline void* careful_memcpy(void *dst, void const *src, size_t len) {
+    return len ? memcpy(dst,src,len) : dst;
+}
+#if defined(memcpy)
+    #undef  memcpy
+#endif
+#define memcpy careful_memcpy
 
 static int max(int x, int y) { return x>y ? x : y; }
 
