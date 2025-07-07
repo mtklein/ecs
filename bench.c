@@ -152,8 +152,8 @@ static void run(char const *name, double (*fn)(int)) {
                                      , min*1e9/N, max*1e9/N
                                      , lgN==10 ? "ns" : "  ");
         long i = 0;
-        for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("█"); }
-        for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("░"); }
+        for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("■"); }
+        for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("⬚"); }
         printf("\n");
         lgN++;
     } while (min < max);
