@@ -135,24 +135,28 @@ static void run(char const *name, double (*fn)(int)) {
     if (!strstr(name, pattern)) {
         return;
     }
-    int const samples = 4;
     printf("%s\n", name);
-    printf("%10s %9s\n", "n", "ns/n");
-    double min = 0;
-    for (int n = 1024; min < 0.125 / samples; n *= 2) {
-        min = 1/0.0;
-        double max = -1/0.0;
-        for (int i = 0; i < samples; i++) {
-            double const t = fn(n);
+
+    int lgN = 10;
+    double min,max;
+    do {
+        int const N = 1<<lgN;
+        min = +1/0.0;
+        max = -1/0.0;
+        for (double const start = now(); now() - start < 1/16.0;) {
+            double const t = fn(N);
             if (min > t) { min = t; }
             if (max < t) { max = t; }
         }
-        printf("%10d %4.1f–%4.1f ", n, min*1e9/n, max*1e9/n);
+        printf("%s%2d %4.1f–%4.1f%s ", lgN==10 ? "N=2^" : "    ", lgN
+                                     , min*1e9/N, max*1e9/N
+                                     , lgN==10 ? "ns" : "  ");
         long i = 0;
-        for (; i < lrint(min*1e9/n); i++) { printf("█"); }
-        for (; i < lrint(max*1e9/n); i++) { printf("⬚"); }
+        for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("█"); }
+        for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("░"); }
         printf("\n");
-    }
+        lgN++;
+    } while (min < max);
     printf("\n");
 }
 
