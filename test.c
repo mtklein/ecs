@@ -172,6 +172,38 @@ static void test_overwrite(void) {
     table_drop(&tag);
 }
 
+static void test_scatter(void) {
+    struct table ints   = {.size = sizeof(int)};
+    struct table floats = {.size = sizeof(float)};
+
+    for (int i = 0; i < 3; i++) {
+        float f = (float)i;
+        table_set(&ints, i, &i);
+        table_set(&floats, i, &f);
+    }
+
+    struct table const *rtable[] = {&ints,&floats};
+    struct table       *wtable[] = {&ints,&floats};
+
+    int key = ~0;
+    struct { int i; float f; } vals;
+    while (table_join(rtable, len(rtable), &key, &vals)) {
+        vals.i *= 2;
+        vals.f *= 3.0f;
+        table_scatter(wtable, len(wtable), key, &vals);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        int   *ip = table_get(&ints, i);
+        float *fp = table_get(&floats, i);
+        expect(*ip == i*2);
+        expect((int)*fp == i*3);
+    }
+
+    table_drop(&ints);
+    table_drop(&floats);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
@@ -179,5 +211,6 @@ int main(void) {
     test_join_single();
     test_join_empty();
     test_overwrite();
+    test_scatter();
     return 0;
 }

@@ -90,3 +90,12 @@ _Bool table_join(struct table const *table[], int tables, int *key, void *vals) 
     }
     return 0;
 }
+
+void table_scatter(struct table *table[], int tables, int key, void const *vals) {
+    char const *src = vals;
+    for (int i = 0; i < tables; i++) {
+        void *dst = table_get(table[i], key);
+        copy(dst, src, table[i]->size);
+        src += table[i]->size;
+    }
+}

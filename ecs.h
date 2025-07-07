@@ -15,3 +15,4 @@ void  table_drop(struct table *table);
 
 void* table_get (struct table const *table, int key);
 _Bool table_join(struct table const *table[], int tables, int *key, void *vals);
+void  table_scatter(struct table *table[], int tables, int key, void const *vals);
