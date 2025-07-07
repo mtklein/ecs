@@ -1,6 +1,7 @@
 #include "ecs.h"
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #define len(x) (int)(sizeof x / sizeof *x)
@@ -128,7 +129,12 @@ static double bench_join_large_small(int n) {
     return elapsed;
 }
 
+static char const *pattern = "";
+
 static void run(char const *name, double (*fn)(int)) {
+    if (!strstr(name, pattern)) {
+        return;
+    }
     int const samples = 4;
     printf("%s\n", name);
     printf("%10s %9s\n", "n", "ns/n");
@@ -150,7 +156,8 @@ static void run(char const *name, double (*fn)(int)) {
     printf("\n");
 }
 
-int main(void) {
+int main(int argc, char const* argv[]) {
+    if (argc > 1) { pattern = argv[1]; }
     run("dense",     bench_dense);
     run("dense_rev", bench_dense_rev);
     run("sparse",    bench_sparse);
