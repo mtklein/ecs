@@ -60,3 +60,23 @@ void table_reset(struct table *t) {
     }
     *t = (struct table){.size=t->size};
 }
+
+_Bool table_join(struct table const *table[], int tables, int *finger, int *key, void *vals) {
+    struct table const *lead = table[0];
+    while (*finger < lead->n) {
+        *key = lead->key[(*finger)++];
+        char *dst = vals;
+        for (int i = 0; i < tables; i++) {
+            void const *src = table_get(table[i], *key);
+            if (!src) {
+                goto next;
+            }
+            memcpy(dst, src, table[i]->size);
+            dst += table[i]->size;
+        }
+        return 1;
+
+    next: continue;
+    }
+    return 0;
+}

@@ -2,6 +2,8 @@
 #include "stdlib.h"
 #include <stdio.h>
 
+#define len(x) (int)(sizeof x / sizeof *x)
+
 static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
     if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
 }
@@ -94,8 +96,40 @@ static void test_tag_table(void) {
     table_reset(&tag);
 }
 
+static void test_join(void) {
+    struct table ints   = {.size=sizeof(int)};
+    struct table floats = {.size=sizeof(float)};
+    struct table tag    = {.size=0};
+
+    for (int i = 0; i < 10; i++) {
+        float f = 2*(float)i;
+        table_set(&ints,     i, &i);
+        table_set(&floats, i*2, &f);
+        table_set(&tag,    i*4, NULL);
+    }
+
+    struct table const *table[] = {&floats,&ints,&tag};
+
+    int finger = 0;
+    int key;
+    struct { float f; int i; } vals;
+
+    expect( table_join(table,len(table), &finger, &key, &vals)
+            && key == 0 && vals.f == 0.0f && vals.i == 0);
+    expect( table_join(table,len(table), &finger, &key, &vals)
+            && key == 4 && vals.f == 4.0f && vals.i == 4);
+    expect( table_join(table,len(table), &finger, &key, &vals)
+            && key == 8 && vals.f == 8.0f && vals.i == 8);
+    expect(!table_join(table,len(table), &finger, &key, &vals));
+
+    table_reset(&ints);
+    table_reset(&floats);
+    table_reset(&tag);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
+    test_join();
     return 0;
 }
