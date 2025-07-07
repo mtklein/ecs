@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define expect(x) if (!(x)) fprintf(stderr, "%s:%d expect(%s)\n", __FILE__, __LINE__, #x), \
-                            __builtin_debugtrap()
+static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
+    if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
+}
+#define expect(x) expect_(x, #x, __FILE__, __LINE__)
 
 static void test_point_table(void) {
     struct point { float x,y; };
