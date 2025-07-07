@@ -1,6 +1,6 @@
 #include "ecs.h"
+#include "stdlib.h"
 #include <stdio.h>
-#include <stdlib.h>
 
 static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
     if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
