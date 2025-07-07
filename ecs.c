@@ -1,5 +1,6 @@
 #include "ecs.h"
-#include "stdlib.h"
+#include "string.h"
+#include <stdlib.h>
 
 static int max(int x, int y) { return x>y ? x : y; }
 
