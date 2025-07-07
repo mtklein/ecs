@@ -26,3 +26,5 @@
     +    int       *sum = ctx;
     +    *sum += *val;
      }
+
+- Match existing code style; avoid purely stylistic changes like spacing around operators.
