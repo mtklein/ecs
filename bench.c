@@ -43,6 +43,27 @@ static double bench_sparse(int n) {
     return elapsed;
 }
 
+static void noop(int key, void* val[], void *ctx) {
+    (void)key; (void)val; (void)ctx;
+}
+
+static double bench_join(int n) {
+    struct table a = {.size = sizeof(int)};
+    struct table b = {.size = sizeof(int)};
+    for (int i = 0; i < n; ++i) {
+        table_set(&a, i, &i);
+        table_set(&b, i, &i);
+    }
+    struct table const *table[] = {&a,&b};
+    void* val[2];
+    double const start = now();
+    table_join(table, 2, noop, val, NULL);
+    double const elapsed = now() - start;
+    table_reset(&a);
+    table_reset(&b);
+    return elapsed;
+}
+
 static void run(char const *name, double (*fn)(int)) {
     printf("%s\n", name);
     printf("%8s  %8s %8s\n", "n", "µs", "ns/n");
@@ -62,5 +83,6 @@ int main(void) {
     run("dense",     bench_dense);
     run("dense_rev", bench_dense_rev);
     run("sparse",    bench_sparse);
+    run("join",      bench_join);
     return 0;
 }

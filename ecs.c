@@ -60,3 +60,23 @@ void table_reset(struct table *t) {
     }
     *t = (struct table){.size=t->size};
 }
+
+void table_join(struct table const *table[], int tables,
+                void (*cb)(int key, void* val[], void *ctx),
+                void* val[], void *ctx) {
+    struct table seen = {0};
+    for (int i = 0; i < tables; i++) {
+        struct table const *t = table[i];
+        for (int ix = 0; ix < t->n; ix++) {
+            int const key = t->key[ix];
+            if (!table_get(&seen, key)) {
+                table_set(&seen, key, NULL);
+                for (int j = 0; j < tables; j++) {
+                    val[j] = table_get(table[j], key);
+                }
+                cb(key, val, ctx);
+            }
+        }
+    }
+    table_reset(&seen);
+}
