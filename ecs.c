@@ -61,7 +61,7 @@ void* table_get(struct table const *t, int key) {
     return NULL;
 }
 
-void table_reset(struct table *t) {
+void table_drop(struct table *t) {
     free(t->ix);
     free(t->key);
     if (t->size) {

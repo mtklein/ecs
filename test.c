@@ -74,7 +74,7 @@ static void test_point_table(void) {
         printf("{%g, %g}\n", (double)p->x, (double)p->y);
     }
 
-    table_reset(&t);
+    table_drop(&t);
 }
 
 static void test_tag_table(void) {
@@ -93,7 +93,7 @@ static void test_tag_table(void) {
     expect( table_get(&tag, 42));
     expect(!table_get(&tag, 47));
 
-    table_reset(&tag);
+    table_drop(&tag);
 }
 
 static void test_join(void) {
@@ -118,9 +118,9 @@ static void test_join(void) {
     expect( table_join(table,len(table), &key, &vals) && key == 8 && vals.f == 8.0f && vals.i == 8);
     expect(!table_join(table,len(table), &key, &vals));
 
-    table_reset(&ints);
-    table_reset(&floats);
-    table_reset(&tag);
+    table_drop(&ints);
+    table_drop(&floats);
+    table_drop(&tag);
 }
 
 static void test_join_single(void) {
@@ -136,7 +136,7 @@ static void test_join_single(void) {
     expect( table_join(table,len(table), &key, &val) && key == 2 && val == 2);
     expect(!table_join(table,len(table), &key, &val));
 
-    table_reset(&t);
+    table_drop(&t);
 }
 
 static void test_join_empty(void) {
@@ -150,7 +150,7 @@ static void test_join_empty(void) {
     int key=~0, val;
     expect(!table_join(table,len(table), &key, &val));
 
-    table_reset(&t);
+    table_drop(&t);
 }
 
 int main(void) {

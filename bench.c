@@ -19,7 +19,7 @@ static double bench_dense(int n) {
         table_set(&t, i, &i);
     }
     double const elapsed = now() - start;
-    table_reset(&t);
+    table_drop(&t);
     return elapsed;
 }
 
@@ -30,7 +30,7 @@ static double bench_dense_rev(int n) {
         table_set(&t, i, &i);
     }
     double const elapsed = now() - start;
-    table_reset(&t);
+    table_drop(&t);
     return elapsed;
 }
 
@@ -42,7 +42,7 @@ static double bench_sparse(int n) {
         table_set(&t, key, &key);
     }
     double const elapsed = now() - start;
-    table_reset(&t);
+    table_drop(&t);
     return elapsed;
 }
 
@@ -59,7 +59,7 @@ static double bench_iter_direct(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_reset(&t);
+    table_drop(&t);
     return elapsed;
 }
 
@@ -76,7 +76,7 @@ static double bench_join_single(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_reset(&t);
+    table_drop(&t);
     return elapsed;
 }
 
@@ -99,8 +99,8 @@ static double bench_join_small_large(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_reset(&small);
-    table_reset(&large);
+    table_drop(&small);
+    table_drop(&large);
     return elapsed;
 }
 
@@ -123,8 +123,8 @@ static double bench_join_large_small(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_reset(&small);
-    table_reset(&large);
+    table_drop(&small);
+    table_drop(&large);
     return elapsed;
 }
 
