@@ -2,11 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TODO: realloc(), memcpy(), and pointer arithmetic below will break in unpredictable ways
-//       if we use a struct table{.size=0}.  Not sure yet how best to tackle that.
-
-static int    imax(   int x,    int y) { return x>y ? x : y; }
-static size_t smax(size_t x, size_t y) { return x>y ? x : y; }
+static int max(int x, int y) { return x>y ? x : y; }
 
 static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
@@ -14,7 +10,7 @@ static _Bool is_pow2_or_zero(int x) {
 
 void table_set(struct table *t, int key, void const *val) {
     if (key >= t->slots) {
-        int const slots = imax(key+1, 2*t->slots);
+        int const slots = max(key+1, 2*t->slots);
         t->ix = realloc(t->ix, (size_t)slots * sizeof *t->ix);
         memset(t->ix + t->slots, ~0, (size_t)(slots - t->slots) * sizeof *t->ix);
         t->slots = slots;
@@ -23,7 +19,7 @@ void table_set(struct table *t, int key, void const *val) {
     if (is_pow2_or_zero(t->n)) {
         size_t const cap = t->n ? 2*(size_t)t->n : 1;
         t->key  = realloc(t-> key, cap * sizeof *t->key);
-        t->data = realloc(t->data, smax(cap * t->size, 1));
+        t->data = t->size ? realloc(t->data, cap * t->size) : t;
     }
 
     int const ix = t->n++;
@@ -60,6 +56,8 @@ void* table_get(struct table const *t, int key) {
 void table_reset(struct table *t) {
     free(t->ix);
     free(t->key);
-    free(t->data);
+    if (t->size) {
+        free(t->data);
+    }
     *t = (struct table){.size=t->size};
 }
