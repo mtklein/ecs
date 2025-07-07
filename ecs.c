@@ -17,6 +17,11 @@ static _Bool is_pow2_or_zero(int x) {
 }
 
 void table_set(struct table *t, int key, void const *val) {
+    for (void *dst = table_get(t, key); dst;) {
+        memcpy(dst, val, t->size);
+        return;
+    }
+
     if (key >= t->slots) {
         int const slots = max(key+1, 2*t->slots);
         t->ix = realloc(t->ix, (size_t)slots * sizeof *t->ix);

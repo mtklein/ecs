@@ -153,11 +153,31 @@ static void test_join_empty(void) {
     table_drop(&t);
 }
 
+static void test_overwrite(void) {
+    struct table t = {.size=sizeof(int)};
+    int val = 1;
+    table_set(&t, 42, &val);
+    val = 2;
+    table_set(&t, 42, &val);
+    expect(t.n == 1);
+    int const *v = t.data;
+    expect(*v == 2);
+    table_drop(&t);
+
+    struct table tag = {0};
+    table_set(&tag, 42, NULL);
+    table_set(&tag, 42, NULL);
+    expect(tag.n == 1);
+    expect(table_get(&tag, 42));
+    table_drop(&tag);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
     test_join();
     test_join_single();
     test_join_empty();
+    test_overwrite();
     return 0;
 }
