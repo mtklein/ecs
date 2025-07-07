@@ -126,9 +126,62 @@ static void test_join(void) {
     table_reset(&tag);
 }
 
+static void test_join_single(void) {
+    struct table ints = {.size = sizeof(int)};
+    for (int i = 0; i < 3; i++) {
+        table_set(&ints, i, &i);
+    }
+
+    struct table const *table[] = {&ints};
+
+    int key = ~0;
+    int val = 0;
+
+    expect(table_join(table, len(table), &key, &val) && key == 0 && val == 0);
+    expect(table_join(table, len(table), &key, &val) && key == 1 && val == 1);
+    expect(table_join(table, len(table), &key, &val) && key == 2 && val == 2);
+    expect(!table_join(table, len(table), &key, &val));
+
+    table_reset(&ints);
+}
+
+static void test_join_empty(void) {
+    struct table t = {.size = sizeof(int)};
+    struct table const *table[] = {&t};
+    int key = ~0;
+    int val = 0;
+    expect(!table_join(table, len(table), &key, &val));
+    table_reset(&t);
+}
+
+static void test_join_duplicate(void) {
+    struct table ints = {.size = sizeof(int)};
+    struct table floats = {.size = sizeof(float)};
+    int i = 0;
+    float f = 0.0f;
+    table_set(&ints, 0, &i);
+    table_set(&ints, 0, &(int){42});
+    table_set(&floats, 0, &f);
+
+    struct table const *table[] = {&ints, &floats};
+
+    int key = ~0;
+    struct { int i; float f; } vals;
+
+    expect(table_join(table, len(table), &key, &vals)
+           && key == 0 && vals.i == 42 && vals.f == 0.0f);
+    expect(!table_join(table, len(table), &key, &vals));
+
+    table_reset(&ints);
+    table_reset(&floats);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
     test_join();
+    test_join_single();
+    test_join_empty();
+    test_join_duplicate();
     return 0;
 }
