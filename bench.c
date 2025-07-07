@@ -52,9 +52,10 @@ static double bench_iter_direct(int n) {
         table_set(&t, i, &i);
     }
     double const start = now();
+    int const *val = t.data;
     int sum = 0;
     for (int i = 0; i < t.n; i++) {
-        sum += ((int*)t.data)[i];
+        sum += val[i];
     }
     sink += sum;
     double const elapsed = now() - start;
@@ -79,27 +80,7 @@ static double bench_join_single(int n) {
     return elapsed;
 }
 
-static double bench_join_equal(int n) {
-    struct table a = {.size = sizeof(int)};
-    struct table b = {.size = sizeof(int)};
-    for (int i = 0; i < n; i++) {
-        table_set(&a, i, &i);
-        table_set(&b, i, &i);
-    }
-    struct table const *tables[] = {&a,&b};
-    int key = ~0, vals[2], sum = 0;
-    double const start = now();
-    while (table_join(tables, len(tables), &key, vals)) {
-        sum += vals[0] + vals[1];
-    }
-    sink += sum;
-    double const elapsed = now() - start;
-    table_reset(&a);
-    table_reset(&b);
-    return elapsed;
-}
-
-static double bench_join_small_lead(int n) {
+static double bench_join_small_large(int n) {
     int const small_n = n / 2;
     struct table small = {.size = sizeof(int)};
     struct table large = {.size = sizeof(int)};
@@ -123,13 +104,13 @@ static double bench_join_small_lead(int n) {
     return elapsed;
 }
 
-static double bench_join_large_lead(int n) {
+static double bench_join_large_small(int n) {
     int const small_n = n / 2;
-    struct table large = {.size = sizeof(int)};
     struct table small = {.size = sizeof(int)};
+    struct table large = {.size = sizeof(int)};
     for (int i = 0; i < small_n; i++) {
-        table_set(&large, i, &i);
         table_set(&small, i, &i);
+        table_set(&large, i, &i);
     }
     for (int i = small_n; i < n; i++) {
         table_set(&large, i, &i);
@@ -142,15 +123,15 @@ static double bench_join_large_lead(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_reset(&large);
     table_reset(&small);
+    table_reset(&large);
     return elapsed;
 }
 
 static void run(char const *name, double (*fn)(int)) {
     int const samples = 4;
     printf("%s\n", name);
-    printf("%8s %5s\n", "n", "ns/n");
+    printf("%10s %9s\n", "n", "ns/n");
     double min = 0;
     for (int n = 1024; min < 0.125 / samples; n *= 2) {
         min = 1/0.0;
@@ -160,10 +141,10 @@ static void run(char const *name, double (*fn)(int)) {
             if (min > t) { min = t; }
             if (max < t) { max = t; }
         }
-        printf("%8d %2d–%2d ", n, (int)(min*1e9/n), (int)(max*1e9/n));
-        int i = 0;
-        for (; i < (int)(min*1e9/n); i++) { printf("█"); }
-        for (; i < (int)(max*1e9/n); i++) { printf("⬚"); }
+        printf("%10d %4.1f–%4.1f ", n, min*1e9/n, max*1e9/n);
+        long i = 0;
+        for (; i < lrint(min*1e9/n); i++) { printf("█"); }
+        for (; i < lrint(max*1e9/n); i++) { printf("⬚"); }
         printf("\n");
     }
     printf("\n");
@@ -175,8 +156,7 @@ int main(void) {
     run("sparse",    bench_sparse);
     run("iter1",     bench_iter_direct);
     run("join1",     bench_join_single);
-    run("join_eq",   bench_join_equal);
-    run("join_sl",   bench_join_small_lead);
-    run("join_ll",   bench_join_large_lead);
+    run("join_sl",   bench_join_small_large);
+    run("join_ls",   bench_join_large_small);
     return 0;
 }
