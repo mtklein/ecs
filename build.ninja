@@ -1,6 +1,7 @@
 builddir = out
 
-dbg  = -fsanitize=address,integer,undefined  -fprofile-instr-generate -fcoverage-mapping
+san  = address,integer,undefined
+dbg  = -fsanitize=$san -fno-sanitize-recover=$san  -fprofile-instr-generate -fcoverage-mapping
 cc   = clang
 warn = -Weverything $
        -Wno-declaration-after-statement $
