@@ -5,9 +5,8 @@
 #define expect(x) if (!(x)) fprintf(stderr, "%s:%d expect(%s)\n", __FILE__, __LINE__, #x), \
                             __builtin_debugtrap()
 
-struct point { float x,y; };
-
-int main(void) {
+static void test_point_table(void) {
+    struct point { float x,y; };
     struct table t = {.size = sizeof(struct point)};
 
     table_set(&t, 47, &(struct point){47.0f, -47.f});
@@ -72,5 +71,29 @@ int main(void) {
     }
 
     table_reset(&t);
+}
+
+static void test_tag_table(void) {
+    struct table tag = {0};
+
+    expect(!table_get(&tag, 42));
+    expect(!table_get(&tag, 47));
+
+    table_set(&tag, 47, NULL);
+    table_set(&tag, 42, NULL);
+
+    expect( table_get(&tag, 42));
+    expect( table_get(&tag, 47));
+
+    table_del(&tag, 47);
+    expect( table_get(&tag, 42));
+    expect(!table_get(&tag, 47));
+
+    table_reset(&tag);
+}
+
+int main(void) {
+    test_point_table();
+    test_tag_table();
     return 0;
 }
