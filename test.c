@@ -110,17 +110,16 @@ static void test_join(void) {
 
     struct table const *table[] = {&floats,&ints,&tag};
 
-    int finger = 0;
-    int key;
+    int key = ~0;
     struct { float f; int i; } vals;
 
-    expect( table_join(table,len(table), &finger, &key, &vals)
+    expect( table_join(table,len(table), &key, &vals)
             && key == 0 && vals.f == 0.0f && vals.i == 0);
-    expect( table_join(table,len(table), &finger, &key, &vals)
+    expect( table_join(table,len(table), &key, &vals)
             && key == 4 && vals.f == 4.0f && vals.i == 4);
-    expect( table_join(table,len(table), &finger, &key, &vals)
+    expect( table_join(table,len(table), &key, &vals)
             && key == 8 && vals.f == 8.0f && vals.i == 8);
-    expect(!table_join(table,len(table), &finger, &key, &vals));
+    expect(!table_join(table,len(table), &key, &vals));
 
     table_reset(&ints);
     table_reset(&floats);

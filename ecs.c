@@ -61,22 +61,22 @@ void table_reset(struct table *t) {
     *t = (struct table){.size=t->size};
 }
 
-_Bool table_join(struct table const *table[], int tables, int *finger, int *key, void *vals) {
+_Bool table_join(struct table const *table[], int tables, int *key, void *vals) {
     struct table const *lead = table[0];
-    while (*finger < lead->n) {
-        *key = lead->key[(*finger)++];
+    for (int ix = *key >= 0 ? 1+lead->ix[*key] : 0; ix < lead->n; ix++) {
+        *key = lead->key[ix];
         char *dst = vals;
         for (int i = 0; i < tables; i++) {
             void const *src = table_get(table[i], *key);
             if (!src) {
-                goto next;
+                goto next_ix;
             }
             memcpy(dst, src, table[i]->size);
             dst += table[i]->size;
         }
         return 1;
 
-    next: continue;
+    next_ix: continue;
     }
     return 0;
 }

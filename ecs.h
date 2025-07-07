@@ -14,4 +14,4 @@ void  table_del  (struct table *table, int key);
 void  table_reset(struct table *table);
 
 void* table_get (struct table const *table, int key);
-_Bool table_join(struct table const *table[], int tables, int *finger, int *key, void *vals);
+_Bool table_join(struct table const *table[], int tables, int *key, void *vals);
