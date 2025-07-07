@@ -61,28 +61,28 @@ void table_reset(struct table *t) {
     *t = (struct table){.size=t->size};
 }
 
-void table_join(struct table const *table[], int tables,
-                void (*cb)(int key, void *vals, void *ctx),
-                void *vals, void *ctx) {
-    struct table seen = {0};
-    for (int i = 0; i < tables; i++) {
-        struct table const *t = table[i];
-        for (int ix = 0; ix < t->n; ix++) {
-            int const key = t->key[ix];
-            if (!table_get(&seen, key)) {
-                table_set(&seen, key, NULL);
-                size_t offset = 0;
-                for (int j = 0; j < tables; j++) {
-                    void *src = table_get(table[j], key);
-                    void *dst = (char *)vals + offset;
-                    size_t const sz = table[j]->size;
-                    if (src) { memcpy(dst, src, sz); }
-                    else { memset(dst, 0, sz); }
-                    offset += sz;
-                }
-                cb(key, vals, ctx);
-            }
-        }
+_Bool table_join(struct table const *table[], int tables, int *key, void *vals) {
+    static struct table const *lead;
+    static int ix;
+
+    if (*key == 0 || table[0] != lead) {
+        lead = table[0];
+        ix = 0;
     }
-    table_reset(&seen);
+    if (ix >= lead->n) {
+        return 0;
+    }
+
+    int const row_key = lead->key[ix++];
+    size_t offset = 0;
+    for (int i = 0; i < tables; i++) {
+        void *src = table_get(table[i], row_key);
+        void *dst = (char*)vals + offset;
+        size_t const sz = table[i]->size;
+        if (src) { memcpy(dst, src, sz); }
+        else { memset(dst, 0, sz); }
+        offset += sz;
+    }
+    *key = row_key;
+    return 1;
 }

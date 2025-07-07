@@ -43,10 +43,6 @@ static double bench_sparse(int n) {
     return elapsed;
 }
 
-static void noop(int key, void *vals, void *ctx) {
-    (void)key; (void)vals; (void)ctx;
-}
-
 static double bench_join(int n) {
     struct table a = {.size = sizeof(int)};
     struct table b = {.size = sizeof(int)};
@@ -57,7 +53,9 @@ static double bench_join(int n) {
     struct table const *table[] = {&a,&b};
     int vals[2];
     double const start = now();
-    table_join(table, 2, noop, vals, NULL);
+    for (int key = 0; table_join(table, 2, &key, vals);) {
+        (void)vals;
+    }
     double const elapsed = now() - start;
     table_reset(&a);
     table_reset(&b);
