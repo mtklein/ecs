@@ -28,3 +28,6 @@
      }
 
 - Match existing code style; avoid purely stylistic changes like spacing around operators.
+
+- Use the singular for array-style pointers and the plural for their matching
+  integer count.  For example `struct table const *table[]` and `int tables`.

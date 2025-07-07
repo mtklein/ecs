@@ -94,8 +94,53 @@ static void test_tag_table(void) {
     table_reset(&tag);
 }
 
+static void collect(int key, void* const row[], void *ctx) {
+    struct {
+        int key[4];
+        int a[4];
+        int b[4];
+        int c[4];
+        int n;
+    } *g = ctx;
+    g->key[g->n] = key;
+    g->a[g->n] = row[0] ? *(int*)row[0] : 0;
+    g->b[g->n] = row[1] ? *(int*)row[1] : 0;
+    g->c[g->n] = row[2] ? *(int*)row[2] : 0;
+    g->n++;
+}
+
+static void test_table_join(void) {
+    struct table a = {.size = sizeof(int)};
+    struct table b = {.size = sizeof(int)};
+    struct table c = {.size = sizeof(int)};
+
+    for (int i = 0; i < 5; ++i) { int v = i;       table_set(&a, i, &v); }
+    for (int i = 2; i < 5; ++i) { int v = i*10;    table_set(&b, i, &v); }
+    for (int i = 3; i < 5; ++i) { int v = i*100;   table_set(&c, i, &v); }
+
+    struct {
+        int key[4];
+        int a[4];
+        int b[4];
+        int c[4];
+        int n;
+    } g = {0};
+
+    struct table const *table[] = {&a,&b,&c};
+    table_join(table, 3, &g, collect);
+
+    expect(g.n == 2);
+    expect(g.key[0] == 3 && g.a[0] == 3  && g.b[0] == 30  && g.c[0] == 300);
+    expect(g.key[1] == 4 && g.a[1] == 4  && g.b[1] == 40  && g.c[1] == 400);
+
+    table_reset(&a);
+    table_reset(&b);
+    table_reset(&c);
+}
+
 int main(void) {
     test_point_table();
     test_tag_table();
+    test_table_join();
     return 0;
 }

@@ -60,3 +60,38 @@ void table_reset(struct table *t) {
     }
     *t = (struct table){.size=t->size};
 }
+
+void table_join(struct table const *table[], int tables, void *ctx,
+                void (*fn)(int, void* const*, void*)) {
+    int lead = 0;
+    for (int i = 1; i < tables; ++i) {
+        if (table[i]->n < table[lead]->n) {
+            lead = i;
+        }
+    }
+
+    void **row = malloc((size_t)tables * sizeof *row);
+    struct table const *tlead = table[lead];
+    for (int i = 0; i < tlead->n; ++i) {
+        int const key = tlead->key[i];
+        row[lead] = tlead->size ? (char*)tlead->data + (size_t)i * tlead->size : NULL;
+
+        _Bool ok = 1;
+        for (int j = 0; j < tables; ++j) {
+            if (j == lead) {
+                continue;
+            }
+            struct table const *t = table[j];
+            int const ix = key < t->slots ? t->ix[key] : ~0;
+            if (ix == ~0) {
+                ok = 0;
+                break;
+            }
+            row[j] = t->size ? (char*)t->data + (size_t)ix * t->size : NULL;
+        }
+        if (ok) {
+            fn(key, row, ctx);
+        }
+    }
+    free(row);
+}
