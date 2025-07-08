@@ -151,5 +151,10 @@ int main(int argc, char const* argv[]) {
     return 0;
 }
 
+__attribute__((constructor))
+static void premain(void) {
+    setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
+}
+
 /* TODO add component utilities for dense iteration and component masks */
 

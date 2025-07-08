@@ -208,3 +208,8 @@ int main(void) {
     test_join_writeback();
     return 0;
 }
+
+__attribute__((constructor))
+static void premain(void) {
+    setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
+}
