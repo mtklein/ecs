@@ -12,23 +12,23 @@ static int next_id = 1;
 struct pos {
     int x,y;
 };
-static struct table pos = {.size=sizeof(struct pos)};
+static struct component pos = {.size=sizeof(struct pos)};
 
 struct glyph {
     char ch;
 };
-static struct table glyph = {.size=sizeof(struct glyph)};
+static struct component glyph = {.size=sizeof(struct glyph)};
 
 struct stats {
     int hp,ac,atk,dmg;
 };
-static struct table stats = {.size=sizeof(struct stats)};
+static struct component stats = {.size=sizeof(struct stats)};
 
 static int entity_at(int x, int y) {
     struct pos const *p = pos.data;
     for (int i = 0; i < pos.n; i++) {
         if (p[i].x == x && p[i].y == y) {
-            return pos.key[i];  // TODO: rename key->id throughought ecs.h/c
+            return pos.id[i];
         }
     }
     return 0;
@@ -39,13 +39,13 @@ static void draw(char *fb, int w, int h) {
         fb[i] = '.';
     }
 
-    struct table *join[] = {&pos,&glyph};
+    struct component *query[] = {&pos,&glyph};
     struct __attribute__((packed)) {
         struct pos   pos;
         struct glyph glyph;
     } vals;
 
-    for (int id=~0; table_join(join,len(join), &id,&vals);) {
+    for (int id=~0; join(query,len(query), &id,&vals);) {
         int const x = vals.pos.x,
                   y = vals.pos.y;
         if (1 && 0 <= x && x < w
@@ -60,21 +60,21 @@ static int d20(void) {
 }
 
 static void combat(int attacker, int defender) {
-    struct stats *as = table_get(&stats, attacker),
-                 *ds = table_get(&stats, defender);
+    struct stats *as = lookup(attacker, &stats),
+                 *ds = lookup(defender, &stats);
 
     if (d20() + as->atk >= ds->ac) {
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
-            table_del(&pos  , defender);
-            table_del(&glyph, defender);
-            table_del(&stats, defender);
+            detach(defender, &pos);
+            detach(defender, &glyph);
+            detach(defender, &stats);
         }
     }
 }
 
-static void move_actor(int id, int dx, int dy, int w, int h) {
-    struct pos *p = table_get(&pos, id);
+static void move_actor(int actor, int dx, int dy, int w, int h) {
+    struct pos *p = lookup(actor, &pos);
 
     int const x = p->x + dx,
               y = p->y + dy;
@@ -83,8 +83,8 @@ static void move_actor(int id, int dx, int dy, int w, int h) {
     }
 
     int const target = entity_at(x,y);
-    if (table_get(&stats, target)) {
-        combat(id, target);
+    if (lookup(target, &stats)) {
+        combat(actor, target);
     } else if (!target) {
         p->x = x;
         p->y = y;
@@ -109,14 +109,14 @@ int main(int argc, char const* argv[]) {
     srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
 
     int const player = next_id++;
-    table_set(&pos  , player, &(struct pos){1,1});
-    table_set(&glyph, player, &(struct glyph){'@'});
-    table_set(&stats, player, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+    attach(player, &pos  , &(struct pos){1,1});
+    attach(player, &glyph, &(struct glyph){'@'});
+    attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
 
     int const imp = next_id++;
-    table_set(&pos  , imp, &(struct pos){3,1});
-    table_set(&glyph, imp, &(struct glyph){'i'});
-    table_set(&stats, imp, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+    attach(imp, &pos  , &(struct pos){3,1});
+    attach(imp, &glyph, &(struct glyph){'i'});
+    attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
 
     int const w=10, h=5;
     char *fb = calloc((size_t)(w*h), sizeof *fb);
@@ -129,7 +129,7 @@ int main(int argc, char const* argv[]) {
             putchar('\n');
         }
 
-        struct stats *ps = table_get(&stats,player);
+        struct stats *ps = lookup(player, &stats);
         if (ps->hp <= 0) {
             done = 1;
         }
@@ -145,11 +145,11 @@ int main(int argc, char const* argv[]) {
         printf("\033[%dA",h);
     }
 
-    table_drop(&pos);
-    table_drop(&glyph);
-    table_drop(&stats);
+    reset(&pos);
+    reset(&glyph);
+    reset(&stats);
     return 0;
 }
 
-/* TODO add table utilities for dense iteration and component masks */
+/* TODO add component utilities for dense iteration and component masks */
 

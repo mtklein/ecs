@@ -12,86 +12,86 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void table_set(struct table *t, int key, void const *val) {
-    for (void *dst = table_get(t, key); dst;) {
-        copy(dst, val, t->size);
+void attach(int id, struct component *c, void const *val) {
+    for (void *dst = lookup(id,c); dst;) {
+        copy(dst, val, c->size);
         return;
     }
 
-    if (key >= t->slots) {
-        int const slots = max(key+1, 2*t->slots);
-        t->ix = realloc(t->ix, (size_t)slots * sizeof *t->ix);
-        memset(t->ix + t->slots, ~0, (size_t)(slots - t->slots) * sizeof *t->ix);
-        t->slots = slots;
+    if (id >= c->slots) {
+        int const slots = max(id+1, 2*c->slots);
+        c->ix = realloc(c->ix, (size_t)slots * sizeof *c->ix);
+        memset(c->ix + c->slots, ~0, (size_t)(slots - c->slots) * sizeof *c->ix);
+        c->slots = slots;
     }
 
-    if (is_pow2_or_zero(t->n)) {
-        size_t const cap = t->n ? 2*(size_t)t->n : 1;
-        t->key  = realloc(t-> key, cap * sizeof *t->key);
-        t->data = t->size ? realloc(t->data, cap * t->size) : t;
+    if (is_pow2_or_zero(c->n)) {
+        size_t const cap = c->n ? 2*(size_t)c->n : 1;
+        c->id   = realloc(c->id, cap * sizeof *c->id);
+        c->data = c->size ? realloc(c->data, cap * c->size) : c;
     }
 
-    int const ix = t->n++;
-    t->key[ix] = key;
-    t->ix[key] = ix;
-    copy((char*)t->data + (size_t)ix * t->size, val, t->size);
+    int const ix = c->n++;
+    c->id[ix] = id;
+    c->ix[id] = ix;
+    copy((char*)c->data + (size_t)ix * c->size, val, c->size);
 }
 
-void table_del(struct table *t, int key) {
-    int const ix = key < t->slots ? t->ix[key] : ~0;
+void detach(int id, struct component *c) {
+    int const ix = id < c->slots ? c->ix[id] : ~0;
     if (ix != ~0) {
-        t->ix[key] = ~0;
-        int const back_ix  = --t->n,
-                  back_key = t->key[back_ix];
+        c->ix[id] = ~0;
+        int const back_ix  = --c->n,
+                  back_id = c->id[back_ix];
         if (ix != back_ix) {
-            t->key[ix] = back_key;
-            t->ix[back_key] = ix;
-            copy((char      *)t->data + (size_t)     ix * t->size,
-                 (char const*)t->data + (size_t)back_ix * t->size, t->size);
+            c->id[ix] = back_id;
+            c->ix[back_id] = ix;
+            copy((char      *)c->data + (size_t)     ix * c->size,
+                 (char const*)c->data + (size_t)back_ix * c->size, c->size);
         }
     }
 }
 
-void* table_get(struct table const *t, int key) {
-    if (key < t->slots) {
-        int const ix = t->ix[key];
+void* lookup(int id, struct component const *c) {
+    if (id < c->slots) {
+        int const ix = c->ix[id];
         if (ix != ~0) {
-            return (char*)t->data + (size_t)ix * t->size;
+            return (char*)c->data + (size_t)ix * c->size;
         }
     }
     return NULL;
 }
 
-void table_drop(struct table *t) {
-    free(t->ix);
-    free(t->key);
-    if (t->size) {
-        free(t->data);
+void reset(struct component *c) {
+    free(c->ix);
+    free(c->id);
+    if (c->size) {
+        free(c->data);
     }
-    *t = (struct table){.size=t->size};
+    *c = (struct component){.size=c->size};
 }
 
-_Bool table_join(struct table *table[], int tables, int *key, void *vals) {
-    struct table const *lead = table[0];
+_Bool join(struct component *c[], int components, int *id, void *vals) {
+    struct component const *lead = c[0];
     int ix = 0;
-    if (*key >= 0) {
+    if (*id >= 0) {
         char const *src = vals;
-        for (int i = 0; i < tables; i++) {
-            copy(table_get(table[i], *key), src, table[i]->size);
-            src += table[i]->size;
+        for (int i = 0; i < components; i++) {
+            copy(lookup(*id, c[i]), src, c[i]->size);
+            src += c[i]->size;
         }
-        ix = 1+lead->ix[*key];
+        ix = 1+lead->ix[*id];
     }
     while (ix < lead->n) {
-        *key = lead->key[ix++];
+        *id = lead->id[ix++];
         char *dst = vals;
-        for (int i = 0; i < tables; i++) {
-            void const *src = table_get(table[i], *key);
+        for (int i = 0; i < components; i++) {
+            void const *src = lookup(*id, c[i]);
             if (!src) {
                 goto next_ix;
             }
-            copy(dst, src, table[i]->size);
-            dst += table[i]->size;
+            copy(dst, src, c[i]->size);
+            dst += c[i]->size;
         }
         return 1;
 

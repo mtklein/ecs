@@ -14,118 +14,124 @@ static double now(void) {
 }
 
 static double bench_dense(int n) {
-    struct table t = {.size = sizeof(int)};
+    struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = 0; i < n; ++i) {
-        table_set(&t, i, &i);
+        attach(i, &c, &i);
     }
     double const elapsed = now() - start;
-    table_drop(&t);
+    reset(&c);
     return elapsed;
 }
 
 static double bench_dense_rev(int n) {
-    struct table t = {.size = sizeof(int)};
+    struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = n - 1; i >= 0; --i) {
-        table_set(&t, i, &i);
+        attach(i, &c, &i);
     }
     double const elapsed = now() - start;
-    table_drop(&t);
+    reset(&c);
     return elapsed;
 }
 
 static double bench_sparse(int n) {
-    struct table t = {.size = sizeof(int)};
+    struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = 0; i < n; ++i) {
-        int key = i * 10;
-        table_set(&t, key, &key);
+        int id = i * 10;
+        attach(id, &c, &id);
     }
     double const elapsed = now() - start;
-    table_drop(&t);
+    reset(&c);
     return elapsed;
 }
 
 static double bench_iter_direct(int n) {
-    struct table t = {.size = sizeof(int)};
+    struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
-        table_set(&t, i, &i);
+        attach(i, &c, &i);
     }
     double const start = now();
-    int const *val = t.data;
+    int const *val = c.data;
     int sum = 0;
-    for (int i = 0; i < t.n; i++) {
+    for (int i = 0; i < c.n; i++) {
         sum += val[i];
     }
     sink += sum;
     double const elapsed = now() - start;
-    table_drop(&t);
+    reset(&c);
     return elapsed;
 }
 
 static double bench_join_single(int n) {
-    struct table t = {.size = sizeof(int)};
+    struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
-        table_set(&t, i, &i);
+        attach(i, &c, &i);
     }
-    struct table *table[] = {&t};
-    int key = ~0, val, sum = 0;
     double const start = now();
-    while (table_join(table, len(table), &key, &val)) {
-        sum += val;
+    {
+        struct component *query[] = {&c};
+        int val, sum = 0;
+        for (int id=~0; join(query,len(query), &id,&val);) {
+            sum += val;
+        }
+        sink += sum;
     }
-    sink += sum;
     double const elapsed = now() - start;
-    table_drop(&t);
+    reset(&c);
     return elapsed;
 }
 
 static double bench_join_small_large(int n) {
     int const small_n = n / 2;
-    struct table small = {.size = sizeof(int)};
-    struct table large = {.size = sizeof(int)};
+    struct component small = {.size = sizeof(int)},
+                     large = {.size = sizeof(int)};
     for (int i = 0; i < small_n; i++) {
-        table_set(&small, i, &i);
-        table_set(&large, i, &i);
+        attach(i, &small, &i);
+        attach(i, &large, &i);
     }
     for (int i = small_n; i < n; i++) {
-        table_set(&large, i, &i);
+        attach(i, &large, &i);
     }
-    struct table *table[] = {&small,&large};
-    int key = ~0, vals[2], sum = 0;
     double const start = now();
-    while (table_join(table, len(table), &key, vals)) {
-        sum += vals[0] + vals[1];
+    {
+        struct component *query[] = {&small,&large};
+        int vals[2], sum = 0;
+        for (int id=~0; join(query,len(query), &id,vals);) {
+            sum += vals[0] + vals[1];
+        }
+        sink += sum;
     }
-    sink += sum;
     double const elapsed = now() - start;
-    table_drop(&small);
-    table_drop(&large);
+    reset(&small);
+    reset(&large);
     return elapsed;
 }
 
 static double bench_join_large_small(int n) {
     int const small_n = n / 2;
-    struct table small = {.size = sizeof(int)};
-    struct table large = {.size = sizeof(int)};
+    struct component small = {.size = sizeof(int)},
+                     large = {.size = sizeof(int)};
     for (int i = 0; i < small_n; i++) {
-        table_set(&small, i, &i);
-        table_set(&large, i, &i);
+        attach(i, &small, &i);
+        attach(i, &large, &i);
     }
     for (int i = small_n; i < n; i++) {
-        table_set(&large, i, &i);
+        attach(i, &large, &i);
     }
-    struct table *table[] = {&large,&small};
-    int key = ~0, vals[2], sum = 0;
     double const start = now();
-    while (table_join(table, len(table), &key, vals)) {
-        sum += vals[0] + vals[1];
+    {
+        struct component *query[] = {&large,&small};
+        int vals[2], sum = 0;
+        for (int id=~0; join(query,len(query), &id,vals);) {
+            sum += vals[0] + vals[1];
+        }
+        sink += sum;
     }
-    sink += sum;
     double const elapsed = now() - start;
-    table_drop(&small);
-    table_drop(&large);
+    reset(&small);
+    reset(&large);
     return elapsed;
 }
 
