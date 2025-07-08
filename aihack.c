@@ -12,23 +12,23 @@ static int next_id = 1;
 struct pos {
     int x,y;
 };
-static struct component pos = {.size=sizeof(struct pos)};
+static struct component pos_ = {.size=sizeof(struct pos)}, *pos=&pos_;
 
 struct glyph {
     char ch;
 };
-static struct component glyph = {.size=sizeof(struct glyph)};
+static struct component glyph_ = {.size=sizeof(struct glyph)}, *glyph=&glyph_;
 
 struct stats {
     int hp,ac,atk,dmg;
 };
-static struct component stats = {.size=sizeof(struct stats)};
+static struct component stats_ = {.size=sizeof(struct stats)}, *stats=&stats_;
 
 static int entity_at(int x, int y) {
-    struct pos const *p = pos.data;
-    for (int i = 0; i < pos.n; i++) {
+    struct pos const *p = pos->data;
+    for (int i = 0; i < pos->n; i++) {
         if (p[i].x == x && p[i].y == y) {
-            return pos.id[i];
+            return pos->id[i];
         }
     }
     return 0;
@@ -39,7 +39,7 @@ static void draw(char *fb, int w, int h) {
         fb[i] = '.';
     }
 
-    struct component *query[] = {&pos,&glyph};
+    struct component *query[] = {pos,glyph};
     struct __attribute__((packed)) {
         struct pos   pos;
         struct glyph glyph;
@@ -60,21 +60,21 @@ static int d20(void) {
 }
 
 static void combat(int attacker, int defender) {
-    struct stats *as = lookup(attacker, &stats),
-                 *ds = lookup(defender, &stats);
+    struct stats *as = lookup(attacker, stats),
+                 *ds = lookup(defender, stats);
 
     if (d20() + as->atk >= ds->ac) {
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
-            detach(defender, &pos);
-            detach(defender, &glyph);
-            detach(defender, &stats);
+            detach(defender, pos);
+            detach(defender, glyph);
+            detach(defender, stats);
         }
     }
 }
 
 static void move_actor(int actor, int dx, int dy, int w, int h) {
-    struct pos *p = lookup(actor, &pos);
+    struct pos *p = lookup(actor, pos);
 
     int const x = p->x + dx,
               y = p->y + dy;
@@ -83,7 +83,7 @@ static void move_actor(int actor, int dx, int dy, int w, int h) {
     }
 
     int const target = entity_at(x,y);
-    if (lookup(target, &stats)) {
+    if (lookup(target, stats)) {
         combat(actor, target);
     } else if (!target) {
         p->x = x;
@@ -109,14 +109,14 @@ int main(int argc, char const* argv[]) {
     srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
 
     int const player = next_id++;
-    attach(player, &pos  , &(struct pos){1,1});
-    attach(player, &glyph, &(struct glyph){'@'});
-    attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+    attach(player, pos  , &(struct pos){1,1});
+    attach(player, glyph, &(struct glyph){'@'});
+    attach(player, stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
 
     int const imp = next_id++;
-    attach(imp, &pos  , &(struct pos){3,1});
-    attach(imp, &glyph, &(struct glyph){'i'});
-    attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+    attach(imp, pos  , &(struct pos){3,1});
+    attach(imp, glyph, &(struct glyph){'i'});
+    attach(imp, stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
 
     int const w=10, h=5;
     char *fb = calloc((size_t)(w*h), sizeof *fb);
@@ -129,7 +129,7 @@ int main(int argc, char const* argv[]) {
             putchar('\n');
         }
 
-        struct stats *ps = lookup(player, &stats);
+        struct stats *ps = lookup(player, stats);
         if (ps->hp <= 0) {
             done = 1;
         }
@@ -145,9 +145,9 @@ int main(int argc, char const* argv[]) {
         printf("\033[%dA",h);
     }
 
-    reset(&pos);
-    reset(&glyph);
-    reset(&stats);
+    reset(pos);
+    reset(glyph);
+    reset(stats);
     return 0;
 }
 
