@@ -34,3 +34,5 @@
 - If asked to do more than you can handle in one PR, act instead as an architect,
   sketching out the code layout, interfaces and not-yet-working tests, leaving
   TODOs for future PRs to follow up.  In unit tests, `#define TODO(x) expect(!(x))`.
+- If you would use an external dependency, instead create the functionality you'd
+  need from that dependency from scratch in a separate .h/.c pair.
