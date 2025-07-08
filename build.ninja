@@ -1,7 +1,7 @@
 builddir = out
 
 san  = address,integer,undefined
-dbg  = -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
+dbg  = -fsanitize=$san -fno-sanitize-recover=$san -fsanitize-coverage=trace-pc-guard
 cc   = clang
 warn = -Weverything $
        -Wno-declaration-after-statement $
@@ -18,7 +18,7 @@ rule link
     command = $cc $in -o $out
 
 rule run
-    command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
+    command = ASAN_OPTIONS=coverage=1:coverage_dir=$builddir ./$in > $out
 
 build out/bench.o: compile bench.c
 build out/opt.o:   compile ecs.c
