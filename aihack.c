@@ -41,17 +41,15 @@ static void draw(int w,int h) {
         buf[i] = '.';
     }
 
-    struct pos   *p = pos.data;
-    struct glyph *g = glyph.data;
-    for (int i = 0; i < pos.n; i++) {
-        int const id = pos.key[i];
-        int const ix = glyph.ix[id];
-        if (ix != ~0) {
-            int const x = p[i].x;
-            int const y = p[i].y;
-            if (x >= 0 && y >= 0 && x < w && y < h) {
-                buf[y * w + x] = g[ix].ch;
-            }
+    struct table *table[] = {&pos,&glyph};
+    char vals[sizeof(struct pos)+sizeof(struct glyph)];
+    for (int id=~0; table_join(table, 2, &id, vals);) {
+        struct pos   *p = (void*)vals;
+        struct glyph *g = (void*)(vals + sizeof(struct pos));
+        int const x = p->x;
+        int const y = p->y;
+        if (x >= 0 && y >= 0 && x < w && y < h) {
+            buf[y * w + x] = g->ch;
         }
     }
 
