@@ -1,6 +1,8 @@
 #include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -23,6 +25,21 @@ struct stats {
     int hp,ac,atk,dmg;
 };
 static struct component stats_ = {.size=sizeof(struct stats)}, *stats=&stats_;
+
+enum { log_lines_cap = 5, log_cols = 32 };
+static int log_first, log_len;
+static char log_lines_buf[log_lines_cap][log_cols];
+
+static void log_event(char const *msg) {
+    int const ix = (log_first + log_len) % log_lines_cap;
+    strncpy(log_lines_buf[ix], msg, log_cols - 1);
+    log_lines_buf[ix][log_cols - 1] = '\0';
+    if (log_len < log_lines_cap) {
+        log_len++;
+    } else {
+        log_first = (log_first + 1) % log_lines_cap;
+    }
+}
 
 static int entity_at(int x, int y) {
     struct pos const *p = pos->data;
@@ -55,21 +72,51 @@ static void draw(char *fb, int w, int h) {
     }
 }
 
+static void render(char *fb, int w, int h) {
+    int idx = log_first;
+    for (int y = 0; y < h; y++) {
+        fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
+        putchar(' ');
+        char const *msg = "";
+        if (y < log_len) {
+            msg = log_lines_buf[idx];
+            idx = (idx + 1) % log_lines_cap;
+        }
+        printf("%-*s\n", log_cols - 1, msg);
+    }
+}
+
 static int d20(void) {
-    return 1 + rand()%20;
+    int const r = 1 + rand()%20;
+    return r;
 }
 
 static void combat(int attacker, int defender) {
     struct stats *as = lookup(attacker, stats),
                  *ds = lookup(defender, stats);
+    struct glyph *ag = lookup(attacker, glyph),
+                 *dg = lookup(defender, glyph);
 
-    if (d20() + as->atk >= ds->ac) {
+    int const roll = d20();
+    char msg[log_cols];
+    snprintf(msg, sizeof msg, "%c attacks %c", ag->ch, dg->ch);
+    log_event(msg);
+    snprintf(msg, sizeof msg, "roll %d +%d vs %d", roll, as->atk, ds->ac);
+    log_event(msg);
+
+    if (roll + as->atk >= ds->ac) {
+        snprintf(msg, sizeof msg, "hit for %d", as->dmg);
+        log_event(msg);
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
+            snprintf(msg, sizeof msg, "%c dies", dg->ch);
+            log_event(msg);
             detach(defender, pos);
             detach(defender, glyph);
             detach(defender, stats);
         }
+    } else {
+        log_event("miss");
     }
 }
 
@@ -123,11 +170,7 @@ int main(int argc, char const* argv[]) {
 
     for (_Bool done = 0; !done;) {
         draw(fb, w,h);
-
-        for (int y = 0; y < h; y++) {
-            fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
-            putchar('\n');
-        }
+        render(fb, w,h);
 
         struct stats *ps = lookup(player, stats);
         if (ps->hp <= 0) {
