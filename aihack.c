@@ -27,17 +27,46 @@ struct stats {
 static struct component stats_ = {.size=sizeof(struct stats)}, *stats=&stats_;
 
 enum { log_lines_cap = 5, log_cols = 32 };
-static int log_first, log_len;
+static int log_first, log_len, log_unread;
 static char log_lines_buf[log_lines_cap][log_cols];
 
-static void log_event(char const *msg) {
+static void log_event(char const *fmt, ...) {
     int const ix = (log_first + log_len) % log_lines_cap;
-    strncpy(log_lines_buf[ix], msg, log_cols - 1);
-    log_lines_buf[ix][log_cols - 1] = '\0';
+    va_list ap;
+    va_start(ap, fmt);
+    char *out = log_lines_buf[ix];
+    char *end = out + log_cols - 1;
+    while (*fmt && out < end) {
+        if (*fmt == '%') {
+            fmt++;
+            if (*fmt == 'd') {
+                int val = va_arg(ap, int);
+                out += snprintf(out, (size_t)(end - out + 1), "%d", val);
+            } else if (*fmt == 'c') {
+                int val = va_arg(ap, int);
+                if (out < end) { *out++ = (char)val; }
+            } else if (*fmt == 's') {
+                char const *s = va_arg(ap, char const *);
+                while (*s && out < end) { *out++ = *s++; }
+            } else {
+                if (out < end) { *out++ = '%'; }
+                if (*fmt && out < end) { *out++ = *fmt; }
+            }
+        } else {
+            *out++ = *fmt;
+        }
+        fmt++;
+    }
+    *out = '\0';
+    va_end(ap);
+
     if (log_len < log_lines_cap) {
         log_len++;
     } else {
         log_first = (log_first + 1) % log_lines_cap;
+    }
+    if (log_unread < log_lines_cap) {
+        log_unread++;
     }
 }
 
@@ -72,17 +101,21 @@ static void draw(char *fb, int w, int h) {
     }
 }
 
-static void render(char *fb, int w, int h) {
+static void render(char const *fb, int w, int h) {
     int idx = log_first;
     for (int y = 0; y < h; y++) {
         fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
         putchar(' ');
         char const *msg = "";
+        char const *color = "\033[90m"; /* grey */
         if (y < log_len) {
             msg = log_lines_buf[idx];
+            if (y >= log_len - log_unread) {
+                color = "\033[30m"; /* black */
+            }
             idx = (idx + 1) % log_lines_cap;
         }
-        printf("%-*s\n", log_cols - 1, msg);
+        printf("%s%-*s\033[0m\n", color, log_cols - 1, msg);
     }
 }
 
@@ -98,19 +131,14 @@ static void combat(int attacker, int defender) {
                  *dg = lookup(defender, glyph);
 
     int const roll = d20();
-    char msg[log_cols];
-    snprintf(msg, sizeof msg, "%c attacks %c", ag->ch, dg->ch);
-    log_event(msg);
-    snprintf(msg, sizeof msg, "roll %d +%d vs %d", roll, as->atk, ds->ac);
-    log_event(msg);
+    log_event("%c attacks %c", ag->ch, dg->ch);
+    log_event("roll %d +%d vs %d", roll, as->atk, ds->ac);
 
     if (roll + as->atk >= ds->ac) {
-        snprintf(msg, sizeof msg, "hit for %d", as->dmg);
-        log_event(msg);
+        log_event("hit for %d", as->dmg);
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
-            snprintf(msg, sizeof msg, "%c dies", dg->ch);
-            log_event(msg);
+            log_event("%c dies", dg->ch);
             detach(defender, pos);
             detach(defender, glyph);
             detach(defender, stats);
@@ -171,6 +199,7 @@ int main(int argc, char const* argv[]) {
     for (_Bool done = 0; !done;) {
         draw(fb, w,h);
         render(fb, w,h);
+        log_unread = 0;
 
         struct stats *ps = lookup(player, stats);
         if (ps->hp <= 0) {
