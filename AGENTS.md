@@ -1,15 +1,34 @@
-- Keep headers focused, exposing only what will be directly used by callers.
-- Don't write comments; instead refactor and refine identifiers to make comments unnecessary.
-- Always use braces with if,for,do,while,etc.
+General guidelines:
+1) Preserve existing style; avoid purely stylistic changes like whitespace tweaks.
+2) Mimic existing style and established conventions for new code.
+3) Don't proactively defend against bugs; trust the sanitizers will do their job.
+4) Write comments only as a last resort for clarity, preferring to refactor and
+   refine identifiers to make the code itself clear and comments unnecessary.
+5) Keep headers focused, exposing only what will be directly used by callers.
+6) If you would use an external dependency instead recreate the functionality
+   you'd need from that dependency from scratch in a new build target.
+7) If asked to do more than you can handle in one PR instead act as an architect,
+   sketching the code interfaces and not-yet-working tests.  Leave follow-up TODOs.
+
+Specific C style notes:
 - Allow lines up to 100 columns.
+- Always use braces with if, for, do, while, etc.
+- Count bytes with `size_t` and everything else with `int`.
+- Use const liberally, especially with descriptively named local variables...
+- ... but the constness of a pointer is much less important than the constness
+  of its pointee, and multiple consts in a single declaration can be difficult
+  to parse, so prefer not to mark pointers themselves const except when it is
+  unusually important to signal a pointer will not be changing.
+- Use singular names for arrays and array-style pointers and the plural for their
+  paired integer count.  E.g. `struct table const *table[]` and `int tables`.
 - Keep pointer `*`s snug with the variable name on the right,
   or with the type to the left if there is no variable name:
 
     - void *component_data(struct component * comp, int entity);
     + void* component_data(struct component *comp, int entity);
 
-- Don't disable -Wpadded.  Instead rearrange struct fields so there is no
-  padding, or if that's not possible, insert anonymous padding bitfields:
+- Don't disable -Wpadded.  Rearrange struct fields so there is no padding,
+  or insert anonymous padding bitfields if that's not possible:
 
     struct foo {
         int   len;
@@ -26,13 +45,3 @@
     +    int       *sum = ctx;
     +    *sum += *val;
      }
-
-- Match existing code style; avoid purely stylistic changes like spacing around operators.
-
-- Use the singular for array-style pointers and the plural for their matching
-  integer count.  For example `struct table const *table[]` and `int tables`.
-- If asked to do more than you can handle in one PR, act instead as an architect,
-  sketching out the code layout, interfaces and not-yet-working tests, leaving
-  TODOs for future PRs to follow up.  In unit tests, `#define TODO(x) expect(!(x))`.
-- If you would use an external dependency, instead create the functionality you'd
-  need from that dependency from scratch in a separate .h/.c pair.
