@@ -15,7 +15,7 @@ rule compile
     deps    = gcc
 
 rule link
-    command = $cc $in -o $out
+    command = $cc $in $ldflags -o $out
 
 rule run
     command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
@@ -30,6 +30,7 @@ build out/aihack.o: compile aihack.c
     cc = $cc $dbg
 
 build out/bench:  link out/bench.o out/opt.o
+    ldflags = -lm
 build out/test:   link out/test.o  out/dbg.o
     cc = $cc $dbg
 build out/aihack: link out/aihack.o out/dbg.o
