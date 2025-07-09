@@ -1,4 +1,5 @@
 #include "ecs.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,23 +7,57 @@ static inline void* copy(void *dst, void const *src, size_t len) {
     return len ? memcpy(dst,src,len) : dst;
 }
 
-static int max(int x, int y) { return x>y ? x : y; }
+__attribute__((no_sanitize("integer")))
+static unsigned hash(int id) {
+    unsigned bits = (unsigned)id;
+    bits *= 0xcc9e2d51;
+    bits = (bits << 15) | (bits >> 17);
+    bits *= 0x1b873593;
+    return bits;
+}
 
 static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
+static int find_slot(struct component const *c, int id, int *ix) {
+    int const mask = c->slots - 1;
+    for (int tomb=-1, slot=(int)hash(id) & mask; (_Bool)1; slot = (slot+1) & mask) {
+        switch (*ix = c->ix[slot]) {
+            case ~0: return tomb >= 0 ? tomb : slot;
+            case ~1: if (tomb < 0) { tomb = slot; }        break;
+            default: if (c->id[*ix] == id) { return slot;} break;
+        }
+    }
+}
+
+static void rehash(struct component *c, int slots) {
+    int   *new_ix = malloc((size_t)slots * sizeof *new_ix);
+    memset(new_ix, ~0,     (size_t)slots * sizeof *new_ix);
+
+    int const mask = slots - 1;
+    for (int ix = 0; ix < c->n; ix++) {
+        int slot = (int)hash(c->id[ix]) & mask;
+        while (new_ix[slot] >= 0) {
+            slot = (slot+1) & mask;
+        }
+        new_ix[slot] = ix;
+    }
+    free(c->ix);
+    c->ix    = new_ix;
+    c->slots = slots;
+}
+
 void attach(int id, struct component *c, void const *val) {
-    for (void *dst = lookup(id,c); dst;) {
-        copy(dst, val, c->size);
-        return;
+    if (!c->slots) {
+        rehash(c, 2);
     }
 
-    if (id >= c->slots) {
-        int const slots = max(id+1, 2*c->slots);
-        c->ix = realloc(c->ix, (size_t)slots * sizeof *c->ix);
-        memset(c->ix + c->slots, ~0, (size_t)(slots - c->slots) * sizeof *c->ix);
-        c->slots = slots;
+    int ix;
+    int const slot = find_slot(c, id, &ix);
+    if (ix >= 0) {
+        copy((char*)c->data + (size_t)ix * c->size, val, c->size);
+        return;
     }
 
     if (is_pow2_or_zero(c->n)) {
@@ -31,31 +66,46 @@ void attach(int id, struct component *c, void const *val) {
         c->data = c->size ? realloc(c->data, cap * c->size) : c;
     }
 
-    int const ix = c->n++;
-    c->id[ix] = id;
-    c->ix[id] = ix;
+    ix = c->n++;
+    c->id[ix]   = id;
+    c->ix[slot] = ix;
     copy((char*)c->data + (size_t)ix * c->size, val, c->size);
+
+    if (c->n/3 >= c->slots/4) {
+        rehash(c, c->slots*2);
+    }
 }
 
 void detach(int id, struct component *c) {
-    int const ix = id < c->slots ? c->ix[id] : ~0;
-    if (ix != ~0) {
-        c->ix[id] = ~0;
-        int const back_ix  = --c->n,
-                  back_id = c->id[back_ix];
+    if (c->slots) {
+        int ix;
+        int const slot = find_slot(c, id, &ix);
+        if (ix < 0) {
+            return;
+        }
+
+        c->ix[slot] = ~1;
+
+        int const back_ix = --c->n;
         if (ix != back_ix) {
+            int unused;
+            int const back_id   = c->id[back_ix],
+                      back_slot = find_slot(c,back_id,&unused);
+            assert(unused == back_ix);
+
             c->id[ix] = back_id;
-            c->ix[back_id] = ix;
-            copy((char      *)c->data + (size_t)     ix * c->size,
-                 (char const*)c->data + (size_t)back_ix * c->size, c->size);
+            c->ix[back_slot] = ix;
+            copy((char       *)c->data + (size_t)     ix * c->size,
+                 (char const *)c->data + (size_t)back_ix * c->size, c->size);
         }
     }
 }
 
 void* lookup(int id, struct component const *c) {
-    if (id < c->slots) {
-        int const ix = c->ix[id];
-        if (ix != ~0) {
+    if (c->slots) {
+        int ix;
+        find_slot(c, id, &ix);
+        if (ix >= 0) {
             return (char*)c->data + (size_t)ix * c->size;
         }
     }
@@ -80,7 +130,9 @@ _Bool join(struct component *c[], int components, int *id, void *vals) {
             copy(lookup(*id, c[i]), src, c[i]->size);
             src += c[i]->size;
         }
-        ix = 1+lead->ix[*id];
+        int prev;
+        find_slot(lead, *id, &prev);
+        ix = prev + 1;
     }
     while (ix < lead->n) {
         *id = lead->id[ix++];
