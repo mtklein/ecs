@@ -4,6 +4,17 @@
 
 #define len(x) (int)(sizeof x / sizeof *x)
 
+__attribute__((no_sanitize("integer")))
+static unsigned test_hash(int id) {
+    unsigned bits = (unsigned)id;
+    bits ^= bits >> 16;
+    bits  = (bits * 0x85ebca6b) & 0xffffffffu;
+    bits ^= bits >> 13;
+    bits  = (bits * 0xc2b2ae35) & 0xffffffffu;
+    bits ^= bits >> 16;
+    return bits;
+}
+
 static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
     if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
 }
@@ -210,15 +221,17 @@ static void test_hashtable_edgecases(void) {
     expect(*(int *)lookup(4, &c) == 4);
 
     detach(0, &c);
+    int slot0 = (int)test_hash(0) & (c.slots-1);
     expect(!lookup(0, &c));
-    expect(c.ix[0] == ~1);
+    expect(c.ix[slot0] == ~1);
     expect(*(int *)lookup(4, &c) == 4);
 
     v = 8;
     attach(8, &c, &v);
 
-    expect(c.ix[0] != ~1);
-    expect(c.id[c.ix[0]] == 8);
+    int slot8 = (int)test_hash(8) & (c.slots-1);
+    expect(c.ix[slot8] != ~1);
+    expect(c.id[c.ix[slot8]] == 8);
     expect(*(int *)lookup(8, &c) == 8);
     expect(*(int *)lookup(4, &c) == 4);
 

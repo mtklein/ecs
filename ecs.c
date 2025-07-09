@@ -10,9 +10,11 @@ static inline void* copy(void *dst, void const *src, size_t len) {
 __attribute__((no_sanitize("integer")))
 static unsigned hash(int id) {
     unsigned bits = (unsigned)id;
-    bits *= 0xcc9e2d51;
-    bits = (bits << 15) | (bits >> 17);
-    bits *= 0x1b873593;
+    bits ^= bits >> 16;
+    bits  = (bits * 0x85ebca6b) & 0xffffffffu;
+    bits ^= bits >> 13;
+    bits  = (bits * 0xc2b2ae35) & 0xffffffffu;
+    bits ^= bits >> 16;
     return bits;
 }
 
