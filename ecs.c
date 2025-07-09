@@ -1,5 +1,4 @@
 #include "ecs.h"
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -7,14 +6,13 @@ static inline void* copy(void *dst, void const *src, size_t len) {
     return len ? memcpy(dst,src,len) : dst;
 }
 
+__attribute__((no_sanitize("integer")))
 static unsigned hash(int id) {
-    uint64_t h = (uint32_t)id;
-    h ^= h >> 16;
-    h = (uint64_t)((__uint128_t)h * UINT64_C(0x85ebca6b) & UINT64_C(0xffffffff));
-    h ^= h >> 13;
-    h = (uint64_t)((__uint128_t)h * UINT64_C(0xc2b2ae35) & UINT64_C(0xffffffff));
-    h ^= h >> 16;
-    return (unsigned)h;
+    unsigned bits = (unsigned)id;
+    bits *= 0xcc9e2d51;
+    bits = (bits << 15) | (bits >> 17);
+    bits *= 0x1b873593;
+    return bits;
 }
 
 static _Bool is_pow2_or_zero(int x) {
