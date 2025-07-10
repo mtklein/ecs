@@ -1,6 +1,8 @@
 #include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -23,6 +25,50 @@ struct stats {
     int hp,ac,atk,dmg;
 };
 static struct component stats_ = {.size=sizeof(struct stats)}, *stats=&stats_;
+
+enum { log_lines_cap = 5, log_cols = 32 };
+static int log_first, log_len, log_unread;
+static char log_lines_buf[log_lines_cap][log_cols];
+
+static void log_event(char const *fmt, ...) {
+    int const ix = (log_first + log_len) % log_lines_cap;
+    va_list ap;
+    va_start(ap, fmt);
+    char *out = log_lines_buf[ix];
+    char *end = out + log_cols - 1;
+    while (*fmt && out < end) {
+        if (*fmt == '%') {
+            fmt++;
+            if (*fmt == 'd') {
+                int val = va_arg(ap, int);
+                out += snprintf(out, (size_t)(end - out + 1), "%d", val);
+            } else if (*fmt == 'c') {
+                int val = va_arg(ap, int);
+                if (out < end) { *out++ = (char)val; }
+            } else if (*fmt == 's') {
+                char const *s = va_arg(ap, char const *);
+                while (*s && out < end) { *out++ = *s++; }
+            } else {
+                if (out < end) { *out++ = '%'; }
+                if (*fmt && out < end) { *out++ = *fmt; }
+            }
+        } else {
+            *out++ = *fmt;
+        }
+        fmt++;
+    }
+    *out = '\0';
+    va_end(ap);
+
+    if (log_len < log_lines_cap) {
+        log_len++;
+    } else {
+        log_first = (log_first + 1) % log_lines_cap;
+    }
+    if (log_unread < log_lines_cap) {
+        log_unread++;
+    }
+}
 
 static int entity_at(int x, int y) {
     struct pos const *p = pos->data;
@@ -55,21 +101,50 @@ static void draw(char *fb, int w, int h) {
     }
 }
 
+static void render(char const *fb, int w, int h) {
+    int idx = log_first;
+    for (int y = 0; y < h; y++) {
+        fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
+        putchar(' ');
+        char const *msg = "";
+        char const *color = "\033[90m"; /* grey */
+        if (y < log_len) {
+            msg = log_lines_buf[idx];
+            if (y >= log_len - log_unread) {
+                color = "\033[30m"; /* black */
+            }
+            idx = (idx + 1) % log_lines_cap;
+        }
+        printf("%s%-*s\033[0m\n", color, log_cols - 1, msg);
+    }
+}
+
 static int d20(void) {
-    return 1 + rand()%20;
+    int const r = 1 + rand()%20;
+    return r;
 }
 
 static void combat(int attacker, int defender) {
     struct stats *as = lookup(attacker, stats),
                  *ds = lookup(defender, stats);
+    struct glyph *ag = lookup(attacker, glyph),
+                 *dg = lookup(defender, glyph);
 
-    if (d20() + as->atk >= ds->ac) {
+    int const roll = d20();
+    log_event("%c attacks %c", ag->ch, dg->ch);
+    log_event("roll %d +%d vs %d", roll, as->atk, ds->ac);
+
+    if (roll + as->atk >= ds->ac) {
+        log_event("hit for %d", as->dmg);
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
+            log_event("%c dies", dg->ch);
             detach(defender, pos);
             detach(defender, glyph);
             detach(defender, stats);
         }
+    } else {
+        log_event("miss");
     }
 }
 
@@ -123,11 +198,8 @@ int main(int argc, char const* argv[]) {
 
     for (_Bool done = 0; !done;) {
         draw(fb, w,h);
-
-        for (int y = 0; y < h; y++) {
-            fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
-            putchar('\n');
-        }
+        render(fb, w,h);
+        log_unread = 0;
 
         struct stats *ps = lookup(player, stats);
         if (ps->hp <= 0) {
