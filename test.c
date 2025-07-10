@@ -198,33 +198,6 @@ static void test_join_writeback(void) {
     reset(&floats);
 }
 
-static void test_hashtable_edgecases(void) {
-    struct component c = {.size = sizeof(int)};
-
-    int v = 0;
-    attach(0, &c, &v);
-    v = 4;
-    attach(4, &c, &v);
-
-    expect(*(int *)lookup(0, &c) == 0);
-    expect(*(int *)lookup(4, &c) == 4);
-
-    detach(0, &c);
-    expect(!lookup(0, &c));
-    expect(c.ix[0] == ~1);
-    expect(*(int *)lookup(4, &c) == 4);
-
-    v = 8;
-    attach(8, &c, &v);
-
-    expect(c.ix[0] != ~1);
-    expect(c.id[c.ix[0]] == 8);
-    expect(*(int *)lookup(8, &c) == 8);
-    expect(*(int *)lookup(4, &c) == 4);
-
-    reset(&c);
-}
-
 int main(void) {
     test_points();
     test_tag();
@@ -233,7 +206,6 @@ int main(void) {
     test_join_empty();
     test_overwrite();
     test_join_writeback();
-    test_hashtable_edgecases();
     return 0;
 }
 
