@@ -12,6 +12,9 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
+int const* iter(struct component const *c) { return c->id; }
+int const* stop(struct component const *c) { return c->id + c->n; }
+
 void attach(int id, struct component *c, void const *val) {
     for (void *dst = lookup(id,c); dst;) {
         copy(dst, val, c->size);
