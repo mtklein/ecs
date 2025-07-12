@@ -22,11 +22,21 @@ struct stats {
 };
 static struct component stats = {.size=sizeof(struct stats)};
 
+static struct component   in_party = {0};
+static struct component controlled = {0};
+
+static void kill(int id) {
+    detach(id, &stats);
+    detach(id, &in_party);
+    detach(id, &controlled);
+    attach(id, &glyph, &(char){'x'});
+}
+
 static int entity_at(int x, int y) {
-    struct pos const *p = pos.data;
-    for (int i = 0; i < pos.n; i++) {
-        if (p[i].x == x && p[i].y == y) {
-            return pos.id[i];
+    for (int const *id = pos.id; id < pos.id + pos.n; id++) {
+        struct pos const *p = lookup(*id, &pos);
+        if (p->x == x && p->y == y) {
+            return *id;
         }
     }
     return 0;
@@ -36,18 +46,12 @@ static void draw(char *fb, int w, int h) {
     for (int i = 0; i < w*h; i++) {
         fb[i] = '.';
     }
-
-    struct pos const *p = pos.data;
-    for (int i = 0; i < pos.n; i++) {
-        int const x = p[i].x,
-                  y = p[i].y;
-
-        int const id = pos.id[i];
-        struct glyph const *g = lookup(id, &glyph);
-
-        if (g && 0 <= x && x < w
-              && 0 <= y && y < h) {
-            fb[y*w + x] = g->ch;
+    for (int const *id = pos.id; id < pos.id + pos.n; id++) {
+        struct pos   const *p = lookup(*id, &pos);
+        struct glyph const *g = lookup(*id, &glyph);
+        if (g && 0 <= p->x && p->x < w
+              && 0 <= p->y && p->y < h) {
+            fb[p->y*w + p->x] = g->ch;
         }
     }
 }
@@ -59,32 +63,31 @@ static int d20(void) {
 static void combat(int attacker, int defender) {
     struct stats *as = lookup(attacker, &stats),
                  *ds = lookup(defender, &stats);
-
-    if (d20() + as->atk >= ds->ac) {
+    if (ds && d20() + as->atk >= ds->ac) {
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
-            detach(defender, &pos);
-            detach(defender, &glyph);
-            detach(defender, &stats);
+            kill(defender);
         }
     }
 }
 
-static void move_actor(int actor, int dx, int dy, int w, int h) {
-    struct pos *p = lookup(actor, &pos);
+static void move(int dx, int dy, int w, int h) {
+    for (int const *id = controlled.id; id < controlled.id + controlled.n; id++) {
+        struct pos *p = lookup(*id, &pos);
 
-    int const x = p->x + dx,
-              y = p->y + dy;
-    if (x<0 || y<0 || x>=w || y>=h) {
-        return;
-    }
+        int const x = p->x + dx,
+                  y = p->y + dy;
+        if (x<0 || y<0 || x>=w || y>=h) {
+            continue;
+        }
 
-    int const target = entity_at(x,y);
-    if (lookup(target, &stats)) {
-        combat(actor, target);
-    } else if (!target) {
-        p->x = x;
-        p->y = y;
+        int const defender = entity_at(x,y);
+        if (defender) {
+            combat(*id, defender);
+        } else {
+            p->x = x;
+            p->y = y;
+        }
     }
 }
 
@@ -102,23 +105,39 @@ static int getch(void) {
     return c;
 }
 
+static _Bool still_alive(void) {
+    for (int const *id = in_party.id; id < in_party.id + in_party.n; id++) {
+        struct stats *s = lookup(*id, &stats);
+        if (s && s->hp <= 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int main(int argc, char const* argv[]) {
     srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
 
-    int const player = next_id++;
-    attach(player, &pos  , &(struct pos){1,1});
-    attach(player, &glyph, &(struct glyph){'@'});
-    attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+    {
+        int const player = next_id++;
+        attach(player, &pos  , &(struct pos){1,1});
+        attach(player, &glyph, &(struct glyph){'@'});
+        attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+        attach(player, &in_party  , NULL);
+        attach(player, &controlled, NULL);
+    }
 
-    int const imp = next_id++;
-    attach(imp, &pos  , &(struct pos){3,1});
-    attach(imp, &glyph, &(struct glyph){'i'});
-    attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+    {
+        int const imp = next_id++;
+        attach(imp, &pos  , &(struct pos){3,1});
+        attach(imp, &glyph, &(struct glyph){'i'});
+        attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+    }
 
     int const w=10, h=5;
     char *fb = calloc((size_t)(w*h), sizeof *fb);
 
-    for (_Bool done = 0; !done;) {
+    for (_Bool playing = 1; playing; playing &= still_alive()) {
         draw(fb, w,h);
 
         for (int y = 0; y < h; y++) {
@@ -126,25 +145,16 @@ int main(int argc, char const* argv[]) {
             putchar('\n');
         }
 
-        struct stats *ps = lookup(player, &stats);
-        if (ps->hp <= 0) {
-            done = 1;
-        }
-
         switch (getch()) {
-            case 'q': done = 1; break;
+            case 'q': playing = 0; break;
 
-            case 'h': move_actor(player,-1,0,w,h); break;
-            case 'j': move_actor(player,0,+1,w,h); break;
-            case 'k': move_actor(player,0,-1,w,h); break;
-            case 'l': move_actor(player,+1,0,w,h); break;
+            case 'h': move(-1,0,w,h); break;
+            case 'j': move(0,+1,w,h); break;
+            case 'k': move(0,-1,w,h); break;
+            case 'l': move(+1,0,w,h); break;
         }
         printf("\033[%dA",h);
     }
-
-    reset(&pos);
-    reset(&glyph);
-    reset(&stats);
     return 0;
 }
 
@@ -152,6 +162,3 @@ __attribute__((constructor))
 static void premain(void) {
     setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }
-
-/* TODO add component utilities for dense iteration and component masks */
-
