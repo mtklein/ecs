@@ -108,11 +108,11 @@ static int getch(void) {
 static _Bool still_alive(void) {
     for (int const *id = in_party.id; id < in_party.id + in_party.n; id++) {
         struct stats *s = lookup(*id, &stats);
-        if (s && s->hp <= 0) {
-            return 0;
+        if (s && s->hp > 0) {
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
 int main(int argc, char const* argv[]) {
