@@ -26,13 +26,15 @@ build out/dbg.o:   compile ecs.c
     cc = $cc $dbg
 build out/test.o:  compile test.c
     cc = $cc $dbg
+build out/systems.o: compile systems.c
+    cc = $cc $dbg
 build out/aihack.o: compile aihack.c
     cc = $cc $dbg
 
 build out/bench:  link out/bench.o out/opt.o
 build out/test:   link out/test.o  out/dbg.o
     cc = $cc $dbg
-build out/aihack: link out/aihack.o out/dbg.o
+build out/aihack: link out/aihack.o out/systems.o out/dbg.o
     cc = $cc $dbg
 
 build out/test.ok: run out/test
