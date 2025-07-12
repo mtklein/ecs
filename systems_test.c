@@ -2,11 +2,7 @@
 #include "systems.h"
 #include <stdlib.h>
 #include <stdio.h>
-
-static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
-    if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr); __builtin_debugtrap(); }
-}
-#define expect(x) expect_(x, #x, __FILE__, __LINE__)
+#include "test.h"
 
 static void test_draw(void) {
     enum { W = 3, H = 2 };

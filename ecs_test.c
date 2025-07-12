@@ -1,11 +1,7 @@
 #include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
-    if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
-}
-#define expect(x) expect_(x, #x, __FILE__, __LINE__)
+#include "test.h"
 
 static void test_points(void) {
     struct point { float x,y; };
