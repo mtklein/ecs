@@ -1,9 +1,7 @@
 #include "ecs.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include "test.h"
 
-static void test_points(void) {
+test(points) {
     struct point { float x,y; };
     __attribute__((cleanup(reset)))
     struct component points = {.size = sizeof(struct point)};
@@ -64,14 +62,9 @@ static void test_points(void) {
         struct point *p = lookup(50, &points);
         expect((int)p->x == 50);
     }
-
-    for (struct point *p = points.data, *end = p + points.n; p != end; p++) {
-        printf("{%g, %g}\n", (double)p->x, (double)p->y);
-    }
-
 }
 
-static void test_tag(void) {
+test(tag) {
     __attribute__((cleanup(reset)))
     struct component tag = {0};
 
@@ -87,10 +80,9 @@ static void test_tag(void) {
     detach(47, &tag);
     expect( lookup(42, &tag));
     expect(!lookup(47, &tag));
-
 }
 
-static void test_overwrite(void) {
+test(overwrite) {
     __attribute__((cleanup(reset)))
     struct component c = {.size=sizeof(int)};
     int val = 1;
@@ -100,7 +92,6 @@ static void test_overwrite(void) {
     expect(c.n == 1);
     int const *v = c.data;
     expect(*v == 2);
-    
 
     __attribute__((cleanup(reset)))
     struct component tag = {0};
@@ -108,16 +99,4 @@ static void test_overwrite(void) {
     attach(42, &tag, NULL);
     expect(tag.n == 1);
     expect(lookup(42, &tag));
-}
-
-int main(void) {
-    test_points();
-    test_tag();
-    test_overwrite();
-    return 0;
-}
-
-__attribute__((constructor))
-static void premain(void) {
-    setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }

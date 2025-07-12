@@ -1,10 +1,7 @@
-#include "ecs.h"
 #include "systems.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include "test.h"
 
-static void test_draw(void) {
+test(draw) {
     enum { W = 3, H = 2 };
     int const w = W, h = H;
     char fb[W*H];
@@ -28,10 +25,9 @@ static void test_draw(void) {
         if (i == 0 || i == 5) { continue; }
         expect(fb[i] == '.');
     }
-
 }
 
-static void test_entity_at(void) {
+test(entity_at) {
     __attribute__((cleanup(reset)))
     struct component pos = {.size = sizeof(struct pos)};
     attach(1, &pos, &(struct pos){1,0});
@@ -40,10 +36,9 @@ static void test_entity_at(void) {
     expect(entity_at(1,0,&pos) == 1);
     expect(entity_at(2,1,&pos) == 2);
     expect(entity_at(0,0,&pos) == 0);
-
 }
 
-static void test_alive(void) {
+test(alive) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
                      party = {0};
@@ -58,10 +53,9 @@ static void test_alive(void) {
     struct stats *s = lookup(2, &stats);
     s->hp = 0;
     expect(!alive(&stats,&party));
-
 }
 
-static void test_kill(void) {
+test(kill) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
                      glyph = {.size = sizeof(struct glyph)},
@@ -77,10 +71,9 @@ static void test_kill(void) {
     struct glyph *g = lookup(1,&glyph);
     expect(g && g->ch == 'x');
     expect(!lookup(1,&ctrl));
-
 }
 
-static void test_combat(void) {
+test(combat) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
                      glyph = {.size = sizeof(struct glyph)},
@@ -98,10 +91,9 @@ static void test_combat(void) {
     expect(!lookup(defender,&stats));
     struct glyph *g = lookup(defender,&glyph);
     expect(g && g->ch == 'x');
-
 }
 
-static void test_move(void) {
+test(move) {
     int const w = 5, h = 5;
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
@@ -133,21 +125,4 @@ static void test_move(void) {
     move(-3,0,w,h,&pos,&stats,&glyph,&ctrl);
     p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
-
 }
-
-int main(void) {
-    test_draw();
-    test_entity_at();
-    test_alive();
-    test_kill();
-    test_combat();
-    test_move();
-    return 0;
-}
-
-__attribute__((constructor))
-static void premain(void) {
-    setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
-}
-
