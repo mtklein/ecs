@@ -20,11 +20,20 @@ rule link
 rule run
     command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
 
+rule mergecov
+    command = llvm-profdata merge -sparse $in -o $out
+
+rule reportcov
+    command = llvm-cov report out/test out/systems_test -instr-profile=$in > $out
+
+rule showcov
+    command = llvm-cov show out/test out/systems_test -instr-profile=$in > $out
+
 build out/bench.o: compile bench.c
 build out/opt.o:   compile ecs.c
 build out/dbg.o:   compile ecs.c
     cc = $cc $dbg
-build out/test.o:  compile test.c
+build out/test.o:  compile ecs_test.c
     cc = $cc $dbg
 build out/systems_test.o: compile systems_test.c
     cc = $cc $dbg
@@ -43,3 +52,7 @@ build out/aihack: link out/aihack.o out/systems.o out/dbg.o
 
 build out/test.ok: run out/test
 build out/systems_test.ok: run out/systems_test
+
+build out/coverage.profdata: mergecov out/test.profraw out/systems_test.profraw || out/test.ok out/systems_test.ok
+build out/coverage.report: reportcov out/coverage.profdata
+build out/coverage.detail: showcov out/coverage.profdata
