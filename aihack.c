@@ -63,7 +63,7 @@ static int d20(void) {
 static void combat(int attacker, int defender) {
     struct stats *as = lookup(attacker, &stats),
                  *ds = lookup(defender, &stats);
-    if (ds && d20() + as->atk >= ds->ac) {
+    if (as && ds && d20() + as->atk >= ds->ac) {
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
             kill(defender);
@@ -81,9 +81,9 @@ static void move(int dx, int dy, int w, int h) {
             continue;
         }
 
-        int const defender = entity_at(x,y);
-        if (defender) {
-            combat(*id, defender);
+        int const found = entity_at(x,y);
+        if (found) {
+            combat(*id, found);
         } else {
             p->x = x;
             p->y = y;
