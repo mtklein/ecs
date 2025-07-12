@@ -33,7 +33,7 @@ static void kill(int id) {
 }
 
 static int entity_at(int x, int y) {
-    for (int const *id = iter(&pos), *end = stop(&pos); id != end; id++) {
+    for (int const *id = pos.id; id < pos.id + pos.n; id++) {
         struct pos const *p = lookup(*id, &pos);
         if (p->x == x && p->y == y) {
             return *id;
