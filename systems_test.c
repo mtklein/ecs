@@ -14,9 +14,8 @@ static void test_draw(void) {
     char fb[W*H];
 
     __attribute__((cleanup(reset)))
-    struct component pos   = {.size = sizeof(struct pos)};
-    __attribute__((cleanup(reset)))
-    struct component glyph = {.size = sizeof(struct glyph)};
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)};
 
     attach(1, &pos, &(struct pos){0,0});
     attach(1, &glyph, &(struct glyph){'a'});
@@ -50,9 +49,8 @@ static void test_entity_at(void) {
 
 static void test_alive(void) {
     __attribute__((cleanup(reset)))
-    struct component stats = {.size = sizeof(struct stats)};
-    __attribute__((cleanup(reset)))
-    struct component party = {0};
+    struct component stats = {.size = sizeof(struct stats)},
+                     party = {0};
 
     attach(1, &stats, &(struct stats){.hp=0});
     attach(1, &party, NULL);
@@ -69,11 +67,9 @@ static void test_alive(void) {
 
 static void test_kill(void) {
     __attribute__((cleanup(reset)))
-    struct component stats = {.size = sizeof(struct stats)};
-    __attribute__((cleanup(reset)))
-    struct component glyph = {.size = sizeof(struct glyph)};
-    __attribute__((cleanup(reset)))
-    struct component ctrl  = {0};
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
 
     attach(1, &stats, &(struct stats){.hp=5});
     attach(1, &glyph, &(struct glyph){'@'});
@@ -90,11 +86,9 @@ static void test_kill(void) {
 
 static void test_combat(void) {
     __attribute__((cleanup(reset)))
-    struct component stats = {.size = sizeof(struct stats)};
-    __attribute__((cleanup(reset)))
-    struct component glyph = {.size = sizeof(struct glyph)};
-    __attribute__((cleanup(reset)))
-    struct component ctrl  = {0};
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
 
     int attacker = 1;
     int defender = 2;
@@ -114,13 +108,10 @@ static void test_combat(void) {
 static void test_move(void) {
     int const w = 5, h = 5;
     __attribute__((cleanup(reset)))
-    struct component pos   = {.size = sizeof(struct pos)};
-    __attribute__((cleanup(reset)))
-    struct component stats = {.size = sizeof(struct stats)};
-    __attribute__((cleanup(reset)))
-    struct component glyph = {.size = sizeof(struct glyph)};
-    __attribute__((cleanup(reset)))
-    struct component ctrl  = {0};
+    struct component pos   = {.size = sizeof(struct pos)},
+                     stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
 
     int player = 1;
     attach(player,&pos,&(struct pos){1,1});
