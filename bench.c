@@ -79,23 +79,6 @@ static double bench_lookup(int n) {
     return elapsed;
 }
 
-static double bench_begin_end(int n) {
-    __attribute__((cleanup(reset)))
-    struct component c = {.size = sizeof(int)};
-    for (int i = 0; i < n; i++) {
-        attach(i, &c, &i);
-    }
-    double const start = now();
-    int sum = 0;
-    for (int const *id = iter(&c), *end = stop(&c); id != end; id++) {
-        int const *val = lookup(*id, &c);
-        sum += *val;
-    }
-    sink += sum;
-    double const elapsed = now() - start;
-    return elapsed;
-}
-
 static char const *pattern = "";
 
 static void run(char const *name, double (*fn)(int)) {
@@ -134,6 +117,5 @@ int main(int argc, char const* argv[]) {
     run("sparse",    bench_sparse);
     run("iter",      bench_iter);
     run("lookup",    bench_lookup);
-    run("begin_end", bench_begin_end);
     return 0;
 }
