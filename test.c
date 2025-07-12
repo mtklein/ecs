@@ -9,6 +9,7 @@ static inline void expect_(_Bool x, const char *expr, const char *file, int line
 
 static void test_points(void) {
     struct point { float x,y; };
+    __attribute__((cleanup(reset)))
     struct component points = {.size = sizeof(struct point)};
 
     attach(47, &points, &(struct point){47.0f, -47.f});
@@ -72,10 +73,10 @@ static void test_points(void) {
         printf("{%g, %g}\n", (double)p->x, (double)p->y);
     }
 
-    reset(&points);
 }
 
 static void test_tag(void) {
+    __attribute__((cleanup(reset)))
     struct component tag = {0};
 
     expect(!lookup(42, &tag));
@@ -91,10 +92,10 @@ static void test_tag(void) {
     expect( lookup(42, &tag));
     expect(!lookup(47, &tag));
 
-    reset(&tag);
 }
 
 static void test_overwrite(void) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size=sizeof(int)};
     int val = 1;
     attach(42, &c, &val);
@@ -103,14 +104,14 @@ static void test_overwrite(void) {
     expect(c.n == 1);
     int const *v = c.data;
     expect(*v == 2);
-    reset(&c);
+    
 
+    __attribute__((cleanup(reset)))
     struct component tag = {0};
     attach(42, &tag, NULL);
     attach(42, &tag, NULL);
     expect(tag.n == 1);
     expect(lookup(42, &tag));
-    reset(&tag);
 }
 
 int main(void) {

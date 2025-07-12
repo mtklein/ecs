@@ -13,28 +13,29 @@ static double now(void) {
 }
 
 static double bench_dense(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = 0; i < n; ++i) {
         attach(i, &c, &i);
     }
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 
 static double bench_dense_rev(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = n - 1; i >= 0; --i) {
         attach(i, &c, &i);
     }
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 
 static double bench_sparse(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     double const start = now();
     for (int i = 0; i < n; ++i) {
@@ -42,11 +43,11 @@ static double bench_sparse(int n) {
         attach(id, &c, &id);
     }
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 
 static double bench_iter(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         attach(i, &c, &i);
@@ -59,10 +60,10 @@ static double bench_iter(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 static double bench_lookup(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         attach(i, &c, &i);
@@ -75,11 +76,11 @@ static double bench_lookup(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 
 static double bench_begin_end(int n) {
+    __attribute__((cleanup(reset)))
     struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         attach(i, &c, &i);
@@ -92,7 +93,6 @@ static double bench_begin_end(int n) {
     }
     sink += sum;
     double const elapsed = now() - start;
-    reset(&c);
     return elapsed;
 }
 
