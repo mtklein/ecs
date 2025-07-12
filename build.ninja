@@ -1,5 +1,6 @@
 builddir = out
 
+path = env PATH=/opt/homebrew/opt/llvm/bin:$$PATH
 san  = address,integer,undefined
 dbg  = -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
 cc   = clang
@@ -10,30 +11,32 @@ warn = -Weverything $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
+    command = $path $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
 rule link
-    command = $cc -lm $in -o $out
+    command = $path $cc -lm $in -o $out
 
 rule run
     command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
 
 rule mergecov
-    command = llvm-profdata merge -sparse $in -o $out
+    command = $path llvm-profdata merge -sparse $in -o $out
 
 rule reportcov
-    command = llvm-cov report out/test out/systems_test -instr-profile=$in > $out
+    command = $path llvm-cov report -object out/ecs_test -object out/systems_test $
+               -instr-profile=$in > $out
 
 rule showcov
-    command = llvm-cov show out/test out/systems_test -instr-profile=$in > $out
+    command = $path llvm-cov show -object out/ecs_test -object out/systems_test $
+               -instr-profile=$in > $out
 
 build out/bench.o: compile bench.c
 build out/opt.o:   compile ecs.c
 build out/dbg.o:   compile ecs.c
     cc = $cc $dbg
-build out/test.o:  compile ecs_test.c
+build out/ecs_test.o:  compile ecs_test.c
     cc = $cc $dbg
 build out/systems_test.o: compile systems_test.c
     cc = $cc $dbg
@@ -43,16 +46,17 @@ build out/aihack.o: compile aihack.c
     cc = $cc $dbg
 
 build out/bench:  link out/bench.o out/opt.o
-build out/test:   link out/test.o  out/dbg.o
+build out/ecs_test:   link out/ecs_test.o out/dbg.o
     cc = $cc $dbg
 build out/systems_test: link out/systems_test.o out/systems.o out/dbg.o
     cc = $cc $dbg
 build out/aihack: link out/aihack.o out/systems.o out/dbg.o
     cc = $cc $dbg
 
-build out/test.ok: run out/test
-build out/systems_test.ok: run out/systems_test
+build out/ecs_test.ok     | out/ecs_test.profraw:     run out/ecs_test
+build out/systems_test.ok | out/systems_test.profraw: run out/systems_test
 
-build out/coverage.profdata: mergecov out/test.profraw out/systems_test.profraw || out/test.ok out/systems_test.ok
-build out/coverage.report: reportcov out/coverage.profdata
-build out/coverage.detail: showcov out/coverage.profdata
+build out/coverage.profdata: mergecov out/ecs_test.profraw out/systems_test.profraw
+build out/coverage.report:  reportcov out/coverage.profdata | out/ecs_test out/systems_test
+build out/coverage.detail:    showcov out/coverage.profdata | out/ecs_test out/systems_test
+
