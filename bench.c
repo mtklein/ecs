@@ -4,7 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-#define len(x) (int)(sizeof x / sizeof *x)
 static volatile int sink;
 
 static double now(void) {
@@ -47,7 +46,7 @@ static double bench_sparse(int n) {
     return elapsed;
 }
 
-static double bench_iter_direct(int n) {
+static double bench_iter(int n) {
     struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         attach(i, &c, &i);
@@ -63,75 +62,20 @@ static double bench_iter_direct(int n) {
     reset(&c);
     return elapsed;
 }
-
-static double bench_join_single(int n) {
+static double bench_lookup(int n) {
     struct component c = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         attach(i, &c, &i);
     }
     double const start = now();
-    {
-        struct component *query[] = {&c};
-        int val, sum = 0;
-        for (int id=~0; join(query,len(query), &id,&val);) {
-            sum += val;
-        }
-        sink += sum;
+    int sum = 0;
+    for (int id = 0; id < n; id++) {
+        int const *val = lookup(id, &c);
+        sum += *val;
     }
+    sink += sum;
     double const elapsed = now() - start;
     reset(&c);
-    return elapsed;
-}
-
-static double bench_join_small_large(int n) {
-    int const small_n = n / 2;
-    struct component small = {.size = sizeof(int)},
-                     large = {.size = sizeof(int)};
-    for (int i = 0; i < small_n; i++) {
-        attach(i, &small, &i);
-        attach(i, &large, &i);
-    }
-    for (int i = small_n; i < n; i++) {
-        attach(i, &large, &i);
-    }
-    double const start = now();
-    {
-        struct component *query[] = {&small,&large};
-        int vals[2], sum = 0;
-        for (int id=~0; join(query,len(query), &id,vals);) {
-            sum += vals[0] + vals[1];
-        }
-        sink += sum;
-    }
-    double const elapsed = now() - start;
-    reset(&small);
-    reset(&large);
-    return elapsed;
-}
-
-static double bench_join_large_small(int n) {
-    int const small_n = n / 2;
-    struct component small = {.size = sizeof(int)},
-                     large = {.size = sizeof(int)};
-    for (int i = 0; i < small_n; i++) {
-        attach(i, &small, &i);
-        attach(i, &large, &i);
-    }
-    for (int i = small_n; i < n; i++) {
-        attach(i, &large, &i);
-    }
-    double const start = now();
-    {
-        struct component *query[] = {&large,&small};
-        int vals[2], sum = 0;
-        for (int id=~0; join(query,len(query), &id,vals);) {
-            sum += vals[0] + vals[1];
-        }
-        sink += sum;
-    }
-    double const elapsed = now() - start;
-    reset(&small);
-    reset(&large);
     return elapsed;
 }
 
@@ -171,9 +115,7 @@ int main(int argc, char const* argv[]) {
     run("dense",     bench_dense);
     run("dense_rev", bench_dense_rev);
     run("sparse",    bench_sparse);
-    run("iter1",     bench_iter_direct);
-    run("join1",     bench_join_single);
-    run("join_sl",   bench_join_small_large);
-    run("join_ls",   bench_join_large_small);
+    run("iter",      bench_iter);
+    run("lookup",    bench_lookup);
     return 0;
 }

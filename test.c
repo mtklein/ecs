@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define len(x) (int)(sizeof x / sizeof *x)
-
 static inline void expect_(_Bool x, const char *expr, const char *file, int line) {
     if (!x) { fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);  __builtin_debugtrap(); }
 }
@@ -96,63 +94,6 @@ static void test_tag(void) {
     reset(&tag);
 }
 
-static void test_join(void) {
-    struct component ints   = {.size=sizeof(int)};
-    struct component floats = {.size=sizeof(float)};
-    struct component tag    = {.size=0};
-
-    for (int i = 0; i < 10; i++) {
-        float f = 2*(float)i;
-        attach(i  , &ints,   &i);
-        attach(i*2, &floats, &f);
-        attach(i*4, &tag,    NULL);
-    }
-
-    struct component *query[] = {&floats,&ints,&tag};
-
-    int id = ~0;
-    struct { float f; int i; } vals;
-
-    expect( join(query,len(query), &id, &vals) && id == 0 && vals.f == 0.0f && vals.i == 0);
-    expect( join(query,len(query), &id, &vals) && id == 4 && vals.f == 4.0f && vals.i == 4);
-    expect( join(query,len(query), &id, &vals) && id == 8 && vals.f == 8.0f && vals.i == 8);
-    expect(!join(query,len(query), &id, &vals));
-
-    reset(&ints);
-    reset(&floats);
-    reset(&tag);
-}
-
-static void test_join_single(void) {
-    struct component c = {.size=sizeof(int)};
-    for (int i = 0; i < 3; i++) {
-        attach(i, &c, &i);
-    }
-
-    struct component *query[] = {&c};
-    int id=~0, val;
-    expect( join(query,len(query), &id, &val) && id == 0 && val == 0);
-    expect( join(query,len(query), &id, &val) && id == 1 && val == 1);
-    expect( join(query,len(query), &id, &val) && id == 2 && val == 2);
-    expect(!join(query,len(query), &id, &val));
-
-    reset(&c);
-}
-
-static void test_join_empty(void) {
-    struct component c = {.size=sizeof(int)};
-    for (int i = 0; i < 3; i++) {
-        attach(i, &c, &i);
-    }
-    struct component empty = {.size=sizeof(int)};
-
-    struct component *query[] = {&c,&empty};
-    int id=~0, val;
-    expect(!join(query,len(query), &id, &val));
-
-    reset(&c);
-}
-
 static void test_overwrite(void) {
     struct component c = {.size=sizeof(int)};
     int val = 1;
@@ -172,40 +113,10 @@ static void test_overwrite(void) {
     reset(&tag);
 }
 
-static void test_join_writeback(void) {
-    struct component ints = {.size = sizeof(int)},
-                   floats = {.size = sizeof(float)};
-    for (int i = 0; i < 3; i++) {
-        float f = (float)i;
-        attach(i, &ints  , &i);
-        attach(i, &floats, &f);
-    }
-
-    struct component *query[] = {&ints,&floats};
-    struct { int i; float f; } vals;
-    for (int id=~0; join(query,len(query), &id,&vals);) {
-        vals.i *= 2;
-        vals.f *= 3;
-    }
-
-    for (int i = 0; i < 3; i++) {
-        int   *ip = lookup(i, &ints  );
-        float *fp = lookup(i, &floats);
-        expect(     *ip == i*2);
-        expect((int)*fp == i*3);
-    }
-    reset(&ints);
-    reset(&floats);
-}
-
 int main(void) {
     test_points();
     test_tag();
-    test_join();
-    test_join_single();
-    test_join_empty();
     test_overwrite();
-    test_join_writeback();
     return 0;
 }
 

@@ -70,32 +70,3 @@ void reset(struct component *c) {
     }
     *c = (struct component){.size=c->size};
 }
-
-_Bool join(struct component *c[], int components, int *id, void *vals) {
-    struct component const *lead = c[0];
-    int ix = 0;
-    if (*id >= 0) {
-        char const *src = vals;
-        for (int i = 0; i < components; i++) {
-            copy(lookup(*id, c[i]), src, c[i]->size);
-            src += c[i]->size;
-        }
-        ix = 1+lead->ix[*id];
-    }
-    while (ix < lead->n) {
-        *id = lead->id[ix++];
-        char *dst = vals;
-        for (int i = 0; i < components; i++) {
-            void const *src = lookup(*id, c[i]);
-            if (!src) {
-                goto next_ix;
-            }
-            copy(dst, src, c[i]->size);
-            dst += c[i]->size;
-        }
-        return 1;
-
-    next_ix: continue;
-    }
-    return 0;
-}

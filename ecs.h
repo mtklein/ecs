@@ -13,4 +13,3 @@ void reset(struct component*);
 void  attach(int id, struct component*, void const *val);
 void  detach(int id, struct component*);
 void* lookup(int id, struct component const *);
-_Bool   join(struct component *component[], int components, int *id, void *vals);
