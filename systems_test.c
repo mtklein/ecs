@@ -13,7 +13,9 @@ static void test_draw(void) {
     int const w = W, h = H;
     char fb[W*H];
 
+    __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)};
+    __attribute__((cleanup(reset)))
     struct component glyph = {.size = sizeof(struct glyph)};
 
     attach(1, &pos, &(struct pos){0,0});
@@ -32,11 +34,10 @@ static void test_draw(void) {
         expect(fb[i] == '.');
     }
 
-    reset(&pos);
-    reset(&glyph);
 }
 
 static void test_entity_at(void) {
+    __attribute__((cleanup(reset)))
     struct component pos = {.size = sizeof(struct pos)};
     attach(1, &pos, &(struct pos){1,0});
     attach(2, &pos, &(struct pos){2,1});
@@ -45,11 +46,12 @@ static void test_entity_at(void) {
     expect(entity_at(2,1,&pos) == 2);
     expect(entity_at(0,0,&pos) == 0);
 
-    reset(&pos);
 }
 
 static void test_alive(void) {
+    __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)};
+    __attribute__((cleanup(reset)))
     struct component party = {0};
 
     attach(1, &stats, &(struct stats){.hp=0});
@@ -63,13 +65,14 @@ static void test_alive(void) {
     s->hp = 0;
     expect(!alive(&stats,&party));
 
-    reset(&stats);
-    reset(&party);
 }
 
 static void test_kill(void) {
+    __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)};
+    __attribute__((cleanup(reset)))
     struct component glyph = {.size = sizeof(struct glyph)};
+    __attribute__((cleanup(reset)))
     struct component ctrl  = {0};
 
     attach(1, &stats, &(struct stats){.hp=5});
@@ -83,14 +86,14 @@ static void test_kill(void) {
     expect(g && g->ch == 'x');
     expect(!lookup(1,&ctrl));
 
-    reset(&stats);
-    reset(&glyph);
-    reset(&ctrl);
 }
 
 static void test_combat(void) {
+    __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)};
+    __attribute__((cleanup(reset)))
     struct component glyph = {.size = sizeof(struct glyph)};
+    __attribute__((cleanup(reset)))
     struct component ctrl  = {0};
 
     int attacker = 1;
@@ -106,16 +109,17 @@ static void test_combat(void) {
     struct glyph *g = lookup(defender,&glyph);
     expect(g && g->ch == 'x');
 
-    reset(&stats);
-    reset(&glyph);
-    reset(&ctrl);
 }
 
 static void test_move(void) {
     int const w = 5, h = 5;
+    __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)};
+    __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)};
+    __attribute__((cleanup(reset)))
     struct component glyph = {.size = sizeof(struct glyph)};
+    __attribute__((cleanup(reset)))
     struct component ctrl  = {0};
 
     int player = 1;
@@ -143,10 +147,6 @@ static void test_move(void) {
     p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
 
-    reset(&pos);
-    reset(&stats);
-    reset(&glyph);
-    reset(&ctrl);
 }
 
 int main(void) {

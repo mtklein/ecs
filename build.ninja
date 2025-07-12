@@ -34,6 +34,7 @@ build out/aihack.o: compile aihack.c
     cc = $cc $dbg
 
 build out/bench:  link out/bench.o out/opt.o
+    cc = $cc -lm
 build out/test:   link out/test.o  out/dbg.o
     cc = $cc $dbg
 build out/systems_test: link out/systems_test.o out/systems.o out/dbg.o
