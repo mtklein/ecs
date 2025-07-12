@@ -2,8 +2,7 @@ builddir = out
 
 path = env PATH=/opt/homebrew/opt/llvm/bin:$$PATH
 san  = address,integer,undefined
-dbg  = -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
-cc   = clang
+cc   = clang -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -33,25 +32,19 @@ rule showcov
                -instr-profile=$in > $out
 
 build out/bench.o: compile bench.c
-build out/opt.o:   compile ecs.c
-build out/dbg.o:   compile ecs.c
-    cc = $cc $dbg
-build out/ecs_test.o:  compile ecs_test.c
-    cc = $cc $dbg
-build out/systems_test.o: compile systems_test.c
-    cc = $cc $dbg
-build out/systems.o: compile systems.c
-    cc = $cc $dbg
-build out/aihack.o: compile aihack.c
-    cc = $cc $dbg
+    cc = clang
+build out/bench:   link out/bench.o
+    cc = clang
 
-build out/bench:  link out/bench.o out/opt.o
-build out/ecs_test:   link out/ecs_test.o out/dbg.o
-    cc = $cc $dbg
-build out/systems_test: link out/systems_test.o out/systems.o out/dbg.o
-    cc = $cc $dbg
-build out/aihack: link out/aihack.o out/systems.o out/dbg.o
-    cc = $cc $dbg
+build out/aihack.o:       compile aihack.c
+build out/ecs.o:          compile ecs.c
+build out/ecs_test.o:     compile ecs_test.c
+build out/systems.o:      compile systems.c
+build out/systems_test.o: compile systems_test.c
+
+build out/aihack:       link out/aihack.o       out/ecs.o out/systems.o
+build out/ecs_test:     link out/ecs_test.o     out/ecs.o
+build out/systems_test: link out/systems_test.o out/ecs.o out/systems.o
 
 build out/ecs_test.ok     | out/ecs_test.profraw:     run out/ecs_test
 build out/systems_test.ok | out/systems_test.profraw: run out/systems_test

@@ -1,4 +1,4 @@
-#include "ecs.h"
+#include "ecs.c"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
