@@ -70,8 +70,8 @@ static double bench_lookup(int n) {
     }
     double const start = now();
     int sum = 0;
-    for (int id = 0; id < n; id++) {
-        int const *val = lookup(id, &c);
+    for (int const *id = c.id; id < c.id + c.n; id++) {
+        int const *val = lookup(*id, &c);
         sum += *val;
     }
     sink += sum;
