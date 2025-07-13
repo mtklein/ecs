@@ -14,6 +14,15 @@ struct glyph {
     char ch;
 };
 
+enum color {
+    COLOR_NONE,
+    COLOR_GREEN,
+    COLOR_BLUE,
+    COLOR_DARK_YELLOW,
+    COLOR_RED,
+    COLOR_PURPLE,
+};
+
 void draw(char *fb, int w, int h,
           struct component const *pos,
           struct component const *glyph);
@@ -41,3 +50,11 @@ void move(int dx, int dy, int w, int h,
           struct component *stats,
           struct component *glyph,
           struct component *controlled);
+
+void draw_disposition(char *fb, enum color *cb, int w, int h,
+                      struct component const *pos,
+                      struct component const *glyph,
+                      struct component const *in_party,
+                      struct component const *friendly,
+                      struct component const *hostile,
+                      struct component const *maddened);

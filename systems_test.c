@@ -172,6 +172,8 @@ test(draw_branches) {
     attach(2,&glyph,&(struct glyph){'b'});
     attach(3,&pos,&(struct pos){0,H});
     attach(3,&glyph,&(struct glyph){'c'});
+    attach(5,&pos,&(struct pos){W,0});
+    attach(5,&glyph,&(struct glyph){'e'});
     attach(4,&pos,&(struct pos){0,0});
     attach(4,&glyph,&(struct glyph){'d'});
     draw(fb,W,H,&pos,&glyph);
@@ -330,4 +332,106 @@ test(combat_crit_fail) {
     combat(a,d, constant_roll,&roll, &stats,&glyph,&ctrl);
     struct stats *s = lookup(d,&stats);
     expect(s && s->hp == 5);
+}
+
+test(draw_disposition) {
+    enum { W = 3, H = 2 };
+    char fb[W*H];
+    enum color cb[W*H];
+
+    __attribute__((cleanup(reset)))
+    struct component pos      = {.size = sizeof(struct pos)},
+                     glyph    = {.size = sizeof(struct glyph)},
+                     in_party = {0},
+                     friendly = {0},
+                     hostile  = {0},
+                     maddened = {0};
+
+    attach(1,&pos,&(struct pos){0,0});
+    attach(1,&glyph,&(struct glyph){'@'});
+    attach(1,&in_party,NULL);
+
+    attach(2,&pos,&(struct pos){1,0});
+    attach(2,&glyph,&(struct glyph){'f'});
+    attach(2,&friendly,NULL);
+
+    attach(3,&pos,&(struct pos){2,0});
+    attach(3,&glyph,&(struct glyph){'n'});
+
+    attach(4,&pos,&(struct pos){0,1});
+    attach(4,&glyph,&(struct glyph){'h'});
+    attach(4,&hostile,NULL);
+
+    attach(5,&pos,&(struct pos){1,1});
+    attach(5,&glyph,&(struct glyph){'m'});
+    attach(5,&maddened,NULL);
+
+    draw_disposition(fb,cb,W,H,
+                    &pos,&glyph,
+                    &in_party,&friendly,&hostile,&maddened);
+
+    expect(cb[0]   == COLOR_GREEN);
+    expect(cb[1]   == COLOR_BLUE);
+    expect(cb[2]   == COLOR_DARK_YELLOW);
+    expect(cb[W]   == COLOR_RED);
+    expect(cb[W+1] == COLOR_PURPLE);
+    for (int i = 0; i < W*H; i++) {
+        if (i==0||i==1||i==2||i==W||i==W+1) { continue; }
+        expect(cb[i] == COLOR_NONE);
+    }
+}
+
+test(draw_disposition_missing_glyph) {
+    enum { W = 2, H = 2 };
+    char fb[W*H];
+    enum color cb[W*H];
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     party = {0};
+    attach(1,&pos,&(struct pos){1,1});
+    attach(1,&party,NULL);
+    draw_disposition(fb,cb,W,H, &pos,&glyph, &party,&(struct component){0},&(struct component){0},&(struct component){0});
+    for (int i = 0; i < W*H; i++) { expect(cb[i] == COLOR_NONE); }
+}
+
+test(draw_disposition_branches) {
+    enum { W = 2, H = 2 };
+    char fb[W*H];
+    enum color cb[W*H];
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     party = {0};
+    attach(1,&pos,&(struct pos){-1,0});
+    attach(1,&glyph,&(struct glyph){'a'});
+    attach(2,&pos,&(struct pos){0,-1});
+    attach(2,&glyph,&(struct glyph){'b'});
+    attach(3,&pos,&(struct pos){0,H});
+    attach(3,&glyph,&(struct glyph){'c'});
+    attach(5,&pos,&(struct pos){W,0});
+    attach(5,&glyph,&(struct glyph){'e'});
+    attach(4,&pos,&(struct pos){0,0});
+    attach(4,&glyph,&(struct glyph){'d'});
+    attach(4,&party,NULL);
+    draw_disposition(fb,cb,W,H, &pos,&glyph, &party,&(struct component){0},&(struct component){0},&(struct component){0});
+    expect(fb[0] == 'd');
+    expect(cb[0] == COLOR_GREEN);
+    for (int i = 1; i < W*H; i++) { expect(cb[i] == COLOR_NONE); }
+}
+
+test(draw_disposition_empty) {
+    char fb[1] = {'q'};
+    enum color cb[1] = {COLOR_PURPLE};
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     party = {0};
+    attach(1,&pos,&(struct pos){0,0});
+    detach(1,&pos);
+    attach(1,&glyph,&(struct glyph){'@'});
+    detach(1,&glyph);
+    draw_disposition(fb,cb,0,0,&pos,&glyph,&party,&(struct component){0},&(struct component){0},&(struct component){0});
+    expect(fb[0] == 'q');
+    expect(cb[0] == COLOR_PURPLE);
 }

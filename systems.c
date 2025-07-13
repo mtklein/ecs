@@ -93,3 +93,46 @@ void move(int dx, int dy, int w, int h,
     }
 }
 
+static enum color entity_color(int id,
+                               struct component const *in_party,
+                               struct component const *friendly,
+                               struct component const *hostile,
+                               struct component const *maddened) {
+    if (lookup(id, in_party)) {
+        return COLOR_GREEN;
+    }
+    if (lookup(id, friendly)) {
+        return COLOR_BLUE;
+    }
+    if (lookup(id, maddened)) {
+        return COLOR_PURPLE;
+    }
+    if (lookup(id, hostile)) {
+        return COLOR_RED;
+    }
+    return COLOR_DARK_YELLOW;
+}
+
+void draw_disposition(char *fb, enum color *cb, int w, int h,
+                      struct component const *pos,
+                      struct component const *glyph,
+                      struct component const *in_party,
+                      struct component const *friendly,
+                      struct component const *hostile,
+                      struct component const *maddened) {
+    for (int i = 0; i < w*h; i++) {
+        fb[i] = '.';
+        cb[i] = COLOR_NONE;
+    }
+    for (int const *id = pos->id; id < pos->id + pos->n; id++) {
+        struct pos   const *p = lookup(*id, pos);
+        struct glyph const *g = lookup(*id, glyph);
+        if (g && 0 <= p->x && p->x < w
+              && 0 <= p->y && p->y < h) {
+            int const i = p->y*w + p->x;
+            fb[i] = g->ch;
+            cb[i] = entity_color(*id, in_party,friendly,hostile,maddened);
+        }
+    }
+}
+

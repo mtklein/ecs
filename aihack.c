@@ -46,7 +46,8 @@ int main(int argc, char const* argv[]) {
         pos   = {.size=sizeof(struct pos)},
         stats = {.size=sizeof(struct stats)},
         glyph = {.size=sizeof(struct glyph)},
-        controlled={0}, in_party={0};
+        controlled={0}, in_party={0},
+        friendly={0}, hostile={0}, maddened={0};
 
     {
         int const player = next_id++;
@@ -62,16 +63,36 @@ int main(int argc, char const* argv[]) {
         attach(imp, &pos  , &(struct pos){3,1});
         attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
         attach(imp, &glyph, &(struct glyph){'i'});
+        attach(imp, &hostile, NULL);
     }
 
     int const w=10, h=5;
     char *fb = calloc((size_t)(w*h), sizeof *fb);
+    enum color *cb = calloc((size_t)(w*h), sizeof *cb);
 
     while (alive(&stats, &in_party)) {
-        draw(fb,w,h, &pos,&glyph);
+        draw_disposition(fb,cb,w,h,
+                        &pos,&glyph,
+                        &in_party,&friendly,&hostile,&maddened);
 
         for (int y = 0; y < h; y++) {
-            fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
+            for (int x = 0; x < w; x++) {
+                enum color const c = cb[y*w + x];
+                char const *ansi = "";
+                switch (c) {
+                    case COLOR_NONE:        break;
+                    case COLOR_GREEN:       ansi = "\033[32m"; break;
+                    case COLOR_BLUE:        ansi = "\033[34m"; break;
+                    case COLOR_DARK_YELLOW: ansi = "\033[33m"; break;
+                    case COLOR_RED:         ansi = "\033[31m"; break;
+                    case COLOR_PURPLE:      ansi = "\033[35m"; break;
+                }
+                fputs(ansi, stdout);
+                putchar(fb[y*w + x]);
+                if (*ansi) {
+                    fputs("\033[0m", stdout);
+                }
+            }
             putchar('\n');
         }
 
