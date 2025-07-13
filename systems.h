@@ -2,6 +2,8 @@
 
 #include "ecs.h"
 
+enum { POS, STATS, GLYPH, DISP, IS_CONTROLLED };
+
 struct pos {
     int x,y;
 };
@@ -20,35 +22,18 @@ struct pixel {
     struct glyph     glyph;
     enum disposition disp;
 };
+void draw(struct pixel *fb, int w, int h, struct component const*);
 
-void draw(struct pixel *fb, int w, int h,
-          struct component const *pos,
-          struct component const *glyph,
-          struct component const *disp);
+int entity_at(int x, int y, struct component const*);
 
-int entity_at(int x, int y,
-              struct component const *pos);
+_Bool alive(struct component const*);
 
-_Bool alive(struct component const *stats,
-            struct component const *disp);
-
-void kill(int id,
-          struct component *stats,
-          struct component *glyph,
-          struct component *disp,
-          struct component *is_controlled);
+void kill(int id, struct component*);
 
 void combat(int attacker, int defender,
             int (*d20)(void *ctx), void *ctx,
-            struct component *stats,
-            struct component *glyph,
-            struct component *disp,
-            struct component *is_controlled);
+            struct component*);
 
 void move(int dx, int dy, int w, int h,
           int (*d20)(void *ctx), void *ctx,
-          struct component *pos,
-          struct component *stats,
-          struct component *glyph,
-          struct component *disp,
-          struct component *is_controlled);
+          struct component*);

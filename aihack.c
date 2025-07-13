@@ -41,36 +41,36 @@ int main(int argc, char const* argv[]) {
 
     int next_id = 1;
 
-    __attribute__((cleanup(reset)))
-    struct component
-        pos   = {.size=sizeof(struct pos)},
-        stats = {.size=sizeof(struct stats)},
-        glyph = {.size=sizeof(struct glyph)},
-        disp  = {.size=sizeof(enum disposition)},
-        is_controlled = {0};
+    struct component c[] = {
+        [POS]   = {.size=sizeof(struct pos)},
+        [STATS] = {.size=sizeof(struct stats)},
+        [GLYPH] = {.size=sizeof(struct glyph)},
+        [DISP]  = {.size=sizeof(enum disposition)},
+        [IS_CONTROLLED] = {0},
+    };
 
     {
         int const player = next_id++;
-        attach(player, &pos  , &(struct pos){1,1});
-        attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
-        attach(player, &glyph, &(struct glyph){'@'});
-        attach(player, &disp , &(enum disposition){PARTY});
-        attach(player, &is_controlled, NULL);
+        attach(player, c+POS  , &(struct pos){1,1});
+        attach(player, c+STATS, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+        attach(player, c+GLYPH, &(struct glyph){'@'});
+        attach(player, c+DISP , &(enum disposition){PARTY});
+        attach(player, c+IS_CONTROLLED, NULL);
     }
 
     {
         int const imp = next_id++;
-        attach(imp, &pos  , &(struct pos){3,1});
-        attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
-        attach(imp, &glyph, &(struct glyph){'i'});
-        attach(imp, &disp , &(enum disposition){HOSTILE});
+        attach(imp, c+POS  , &(struct pos){3,1});
+        attach(imp, c+STATS, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+        attach(imp, c+GLYPH, &(struct glyph){'i'});
+        attach(imp, c+DISP , &(enum disposition){HOSTILE});
     }
 
     int const w=10, h=5;
     struct pixel *fb = calloc((size_t)(w*h), sizeof *fb);
 
-    while (alive(&stats,&disp)) {
-        draw(fb,w,h, &pos,&glyph,&disp);
+    while (alive(c)) {
+        draw(fb,w,h,c);
 
         static char const *color[] = {
             [INERT]    = "\033[0m",
@@ -91,10 +91,10 @@ int main(int argc, char const* argv[]) {
         switch (getch()) {
             case 'q': return 0;
 
-            case 'h': move(-1,0,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
-            case 'j': move(0,+1,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
-            case 'k': move(0,-1,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
-            case 'l': move(+1,0,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
+            case 'h': move(-1,0,w,h, d20,&seed,c); break;
+            case 'j': move(0,+1,w,h, d20,&seed,c); break;
+            case 'k': move(0,-1,w,h, d20,&seed,c); break;
+            case 'l': move(+1,0,w,h, d20,&seed,c); break;
         }
         printf("\033[%dA",h);
     }
