@@ -126,3 +126,168 @@ test(move) {
     p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
 }
+
+
+test(draw_empty) {
+    char fb[1] = {'q'};
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)};
+    attach(1,&pos,&(struct pos){0,0});
+    detach(1,&pos);
+    attach(1,&glyph,&(struct glyph){'@'});
+    detach(1,&glyph);
+    draw(fb,0,0,&pos,&glyph);
+    expect(fb[0] == 'q');
+}
+
+test(draw_missing_glyph) {
+    enum { W = 2, H = 2 };
+    char fb[W*H];
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)};
+    attach(1,&pos,&(struct pos){1,1});
+    draw(fb,W,H,&pos,&glyph);
+    for (int i = 0; i < W*H; i++) {
+        expect(fb[i] == '.');
+    }
+}
+
+test(draw_branches) {
+    enum { W = 2, H = 2 };
+    char fb[W*H];
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)};
+    attach(1,&pos,&(struct pos){-1,0});
+    attach(1,&glyph,&(struct glyph){'a'});
+    attach(2,&pos,&(struct pos){0,-1});
+    attach(2,&glyph,&(struct glyph){'b'});
+    attach(3,&pos,&(struct pos){0,H});
+    attach(3,&glyph,&(struct glyph){'c'});
+    attach(4,&pos,&(struct pos){0,0});
+    attach(4,&glyph,&(struct glyph){'d'});
+    draw(fb,W,H,&pos,&glyph);
+    expect(fb[0] == 'd');
+}
+
+test(entity_at_empty) {
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)};
+    attach(1,&pos,&(struct pos){0,0});
+    detach(1,&pos);
+    expect(entity_at(0,0,&pos) == 0);
+}
+
+test(entity_at_same_x) {
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)};
+    attach(1,&pos,&(struct pos){1,1});
+    attach(2,&pos,&(struct pos){1,2});
+    expect(entity_at(1,0,&pos) == 0);
+    expect(entity_at(1,2,&pos) == 2);
+}
+
+test(alive_empty) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     party = {0};
+    attach(1,&stats,&(struct stats){0});
+    attach(1,&party,NULL);
+    detach(1,&stats);
+    detach(1,&party);
+    expect(!alive(&stats,&party));
+}
+
+test(alive_missing_stats) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     party = {0};
+    attach(1,&party,NULL);
+    expect(!alive(&stats,&party));
+}
+
+test(combat_miss) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    int a = 1, d = 2;
+    attach(a,&stats,&(struct stats){.hp=5,.ac=10,.atk=0,.dmg=1});
+    attach(d,&stats,&(struct stats){.hp=5,.ac=22,.atk=0,.dmg=0});
+    combat(a,d,&stats,&glyph,&ctrl);
+    struct stats *s = lookup(d,&stats);
+    expect(s && s->hp == 5);
+}
+
+test(combat_damage) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    int a = 1, d = 2;
+    attach(a,&stats,&(struct stats){.hp=5,.ac=10,.atk=2,.dmg=3});
+    attach(d,&stats,&(struct stats){.hp=10,.ac=0,.atk=0,.dmg=0});
+    combat(a,d,&stats,&glyph,&ctrl);
+    struct stats *s = lookup(d,&stats);
+    expect(s && s->hp == 7);
+}
+
+test(combat_missing) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    attach(2,&stats,&(struct stats){.hp=5,.ac=0,.atk=0,.dmg=0});
+    combat(1,2,&stats,&glyph,&ctrl);
+    struct stats *s = lookup(2,&stats);
+    expect(s && s->hp == 5);
+    combat(1,3,&stats,&glyph,&ctrl);
+    expect(!lookup(3,&stats));
+}
+
+test(combat_no_defender) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    attach(1,&stats,&(struct stats){.hp=5,.ac=0,.atk=2,.dmg=2});
+    combat(1,2,&stats,&glyph,&ctrl);
+    expect(!lookup(2,&glyph));
+}
+
+test(move_none) {
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)},
+                     stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    attach(1,&ctrl,NULL);
+    detach(1,&ctrl);
+    move(1,1,5,5,&pos,&stats,&glyph,&ctrl);
+}
+
+test(move_bounds) {
+    int const w = 2, h = 2;
+    __attribute__((cleanup(reset)))
+    struct component pos = {.size = sizeof(struct pos)},
+                     stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    int id = 1;
+    attach(id,&pos,&(struct pos){0,0});
+    attach(id,&ctrl,NULL);
+
+    move(0,-1,w,h,&pos,&stats,&glyph,&ctrl); /* y<0 */
+    struct pos *p = lookup(id,&pos);
+    expect(p->x == 0 && p->y == 0);
+
+    p->x = w-1; p->y = 0;
+    move(1,0,w,h,&pos,&stats,&glyph,&ctrl); /* x>=w */
+    expect(p->x == w-1 && p->y == 0);
+
+    p->x = 0; p->y = h-1;
+    move(0,1,w,h,&pos,&stats,&glyph,&ctrl); /* y>=h */
+    expect(p->x == 0 && p->y == h-1);
+}
