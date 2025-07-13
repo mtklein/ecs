@@ -25,13 +25,13 @@ static void premain(void) {
     setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }
 
+static int d20(void *ctx) {
+    (void)ctx;
+    return 1 + rand()%20;
+}
+
 int main(int argc, char const* argv[]) {
     srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
-
-    static int d20(void *ctx) {
-        (void)ctx;
-        return 1 + rand()%20;
-    }
 
     int next_id = 1;
 
