@@ -29,6 +29,9 @@ rule reportcov
 rule showcov
     command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
 
+rule checkcov
+    command = tail -n 1 out/coverage.report | grep -o 100.00 | wc -l | grep -q 4 && touch $out
+
 build out/bench.o: compile bench.c
     cc = $path clang
 build out/bench:   link out/bench.o
@@ -48,4 +51,5 @@ build out/test.ok | out/test.profraw: run out/test
 
 build out/coverage.profdata: mergecov out/test.profraw
 build out/coverage.html:      showcov out/coverage.profdata out/test
-build coverage.report:      reportcov out/coverage.profdata out/test
+build out/coverage.report:  reportcov out/coverage.profdata out/test
+build out/coverage.ok:       checkcov out/coverage.report
