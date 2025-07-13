@@ -10,9 +10,6 @@ General guidelines:
 7) If asked to do more than you can handle in one PR instead act as an architect,
    sketching the code interfaces and not-yet-working tests.  Leave follow-up TODOs.
 
-When creating PRs for this project, always run the exact command `ninja`
-to build and test all targets and check that test coverage is still 100%.
-
 Specific C style notes:
 - Don't wrap lines shorter than 100 columns.
 - Always use braces with if, for, do, while, etc.

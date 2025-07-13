@@ -8,7 +8,7 @@ static int constant_roll(void *ctx) {
 test(draw) {
     enum { W = 3, H = 2 };
     int const w = W, h = H;
-    struct cell fb[W*H];
+    struct pixel fb[W*H];
 
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
@@ -19,18 +19,18 @@ test(draw) {
     attach(1, &glyph, &(struct glyph){'a'});
     attach(2, &pos, &(struct pos){2,1});
     attach(2, &glyph, &(struct glyph){'b'});
-    attach(1, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
-    attach(2, &disp, &(enum disposition){DISPOSITION_HOSTILE});
+    attach(1, &disp, &(enum disposition){PARTY});
+    attach(2, &disp, &(enum disposition){HOSTILE});
     attach(3, &pos, &(struct pos){4,4});
     attach(3, &glyph, &(struct glyph){'c'});
 
     draw(fb,w,h,&pos,&glyph,&disp);
 
-    expect(fb[0].ch == 'a' && fb[0].color == DISPOSITION_IN_PARTY);
-    expect(fb[5].ch == 'b' && fb[5].color == DISPOSITION_HOSTILE);
+    expect(fb[0].glyph.ch == 'a' && fb[0].disp == PARTY);
+    expect(fb[5].glyph.ch == 'b' && fb[5].disp == HOSTILE);
     for (int i = 0; i < w*h; i++) {
         if (i == 0 || i == 5) { continue; }
-        expect(fb[i].ch == '.' && fb[i].color == -1);
+        expect(fb[i].glyph.ch == '.' && fb[i].disp == INERT);
     }
 }
 
@@ -51,9 +51,9 @@ test(alive) {
                      disp  = {.size = sizeof(enum disposition)};
 
     attach(1, &stats, &(struct stats){.hp=0});
-    attach(1, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
+    attach(1, &disp, &(enum disposition){PARTY});
     attach(2, &stats, &(struct stats){.hp=5});
-    attach(2, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
+    attach(2, &disp, &(enum disposition){PARTY});
 
     expect(alive(&stats,&disp));
 
@@ -66,13 +66,14 @@ test(kill) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
                      glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)},
                      ctrl  = {0};
 
     attach(1, &stats, &(struct stats){.hp=5});
     attach(1, &glyph, &(struct glyph){'@'});
     attach(1, &ctrl, NULL);
 
-    kill(1,&stats,&glyph,&ctrl);
+    kill(1,&stats,&glyph,&disp,&ctrl);
 
     expect(!lookup(1,&stats));
     struct glyph *g = lookup(1,&glyph);
@@ -138,7 +139,7 @@ test(move) {
 
 
 test(draw_empty) {
-    struct cell fb[1] = {{'q',-1}};
+    struct pixel fb[] = {{{'q'},INERT}};
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
@@ -153,7 +154,7 @@ test(draw_empty) {
 
 test(draw_missing_glyph) {
     enum { W = 2, H = 2 };
-    struct cell fb[W*H];
+    struct pixel fb[W*H];
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
@@ -166,7 +167,7 @@ test(draw_missing_glyph) {
 }
 
 test(draw_missing_disp) {
-    struct cell fb[1];
+    struct pixel fb[1];
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},

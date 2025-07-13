@@ -14,20 +14,14 @@ struct glyph {
     char ch;
 };
 
-enum disposition {
-    DISPOSITION_IN_PARTY,
-    DISPOSITION_FRIENDLY,
-    DISPOSITION_HOSTILE,
-    DISPOSITION_NEUTRAL,
-    DISPOSITION_MADDENED,
+enum disposition : char { INERT, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
+
+struct pixel {
+    struct glyph     glyph;
+    enum disposition disp;
 };
 
-struct cell {
-    char        ch;
-    signed char color; /* -1 for default */
-};
-
-void draw(struct cell *fb, int w, int h,
+void draw(struct pixel *fb, int w, int h,
           struct component const *pos,
           struct component const *glyph,
           struct component const *disp);
@@ -41,17 +35,20 @@ _Bool alive(struct component const *stats,
 void kill(int id,
           struct component *stats,
           struct component *glyph,
-          struct component *controlled);
+          struct component *disp,
+          struct component *is_controlled);
 
 void combat(int attacker, int defender,
             int (*d20)(void *ctx), void *ctx,
             struct component *stats,
             struct component *glyph,
-            struct component *controlled);
+            struct component *disp,
+            struct component *is_controlled);
 
 void move(int dx, int dy, int w, int h,
           int (*d20)(void *ctx), void *ctx,
           struct component *pos,
           struct component *stats,
           struct component *glyph,
-          struct component *controlled);
+          struct component *disp,
+          struct component *is_controlled);

@@ -46,15 +46,16 @@ int main(int argc, char const* argv[]) {
         pos   = {.size=sizeof(struct pos)},
         stats = {.size=sizeof(struct stats)},
         glyph = {.size=sizeof(struct glyph)},
-        controlled={0}, disp={.size=sizeof(enum disposition)};
+        disp  = {.size=sizeof(enum disposition)},
+        is_controlled = {0};
 
     {
         int const player = next_id++;
         attach(player, &pos  , &(struct pos){1,1});
         attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
         attach(player, &glyph, &(struct glyph){'@'});
-        attach(player, &controlled, NULL);
-        attach(player, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
+        attach(player, &disp , &(enum disposition){PARTY});
+        attach(player, &is_controlled, NULL);
     }
 
     {
@@ -62,30 +63,27 @@ int main(int argc, char const* argv[]) {
         attach(imp, &pos  , &(struct pos){3,1});
         attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
         attach(imp, &glyph, &(struct glyph){'i'});
-        attach(imp, &disp , &(enum disposition){DISPOSITION_HOSTILE});
+        attach(imp, &disp , &(enum disposition){HOSTILE});
     }
 
     int const w=10, h=5;
-    struct cell *fb = calloc((size_t)(w*h), sizeof *fb);
+    struct pixel *fb = calloc((size_t)(w*h), sizeof *fb);
 
-    while (alive(&stats, &disp)) {
+    while (alive(&stats,&disp)) {
         draw(fb,w,h, &pos,&glyph,&disp);
 
-        static char const *ansi[] = {
-            "\033[32m", /* in-party */
-            "\033[34m", /* friendly */
-            "\033[31m", /* hostile */
-            "\033[33m", /* neutral */
-            "\033[35m", /* maddened */
+        static char const *color[] = {
+            [INERT]    = "\033[0m",
+            [PARTY]    = "\033[32m",
+            [FRIENDLY] = "\033[34m",
+            [NEUTRAL]  = "\033[33m",
+            [HOSTILE]  = "\033[31m",
+            [MADDENED] = "\033[35m",
         };
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                struct cell c = fb[y*w + x];
-                char const *color = "\033[0m";
-                if (0 <= c.color && c.color < (int)(sizeof ansi/sizeof *ansi)) {
-                    color = ansi[c.color];
-                }
-                printf("%s%c\033[0m", color, c.ch);
+                struct pixel px = fb[y*w + x];
+                printf("%s%c", color[px.disp], px.glyph.ch);
             }
             putchar('\n');
         }
@@ -93,10 +91,10 @@ int main(int argc, char const* argv[]) {
         switch (getch()) {
             case 'q': return 0;
 
-            case 'h': move(-1,0,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
-            case 'j': move(0,+1,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
-            case 'k': move(0,-1,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
-            case 'l': move(+1,0,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
+            case 'h': move(-1,0,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
+            case 'j': move(0,+1,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
+            case 'k': move(0,-1,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
+            case 'l': move(+1,0,w,h, d20,&seed, &pos,&stats,&glyph,&disp,&is_controlled); break;
         }
         printf("\033[%dA",h);
     }
