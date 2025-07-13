@@ -11,14 +11,18 @@ General guidelines:
    sketching the code interfaces and not-yet-working tests.  Leave follow-up TODOs.
 
 When creating PRs for this project,
-  - always run the exact command `ninja` to build and test all targets; and
-  - add any changes to coverage.report to the PR, making sure coverage stays at 100%.
+  - always run the exact command `ninja && git status --porcelain | wc -l | grep -q 0`
+    to build and test all targets and make sure the repo state is up to date; and
+  - after that, always check for changes to coverage.report, adding them to the PR.
+    Test coverage must remain 100%.
 
 Specific C style notes:
-- Allow lines up to 100 columns.
+- Don't wrap lines shorter than 100 columns.
 - Always use braces with if, for, do, while, etc.
 - Prefer normal nested if/else logic over early return,
   but carefully factor the logic so it is clear and not too deeply nested.
+- Prefer tightly scoped locals passed through function parameters to globals or statics,
+  even in situations when you have seen other people use globals or statics.
 - Count bytes with `size_t` and everything else with `int`.
 - Use const liberally, especially with descriptively named local variables...
 - ... but the constness of a pointer is much less important than the constness
