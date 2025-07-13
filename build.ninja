@@ -30,9 +30,9 @@ rule showcov
     command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
 
 build out/bench.o: compile bench.c
-    cc = clang
+    cc = $path clang
 build out/bench:   link out/bench.o
-    cc = clang
+    cc = $path clang
 
 build out/aihack.o:       compile aihack.c
 build out/ecs.o:          compile ecs.c
