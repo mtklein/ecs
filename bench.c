@@ -4,8 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-static volatile int sink;
-
 static double now(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -58,6 +56,7 @@ static double bench_iter(int n) {
     for (int i = 0; i < c.n; i++) {
         sum += val[i];
     }
+    volatile int sink = 0;
     sink += sum;
     double const elapsed = now() - start;
     return elapsed;
@@ -74,14 +73,15 @@ static double bench_lookup(int n) {
         int const *val = lookup(*id, &c);
         sum += *val;
     }
+    volatile int sink = 0;
     sink += sum;
     double const elapsed = now() - start;
     return elapsed;
 }
 
-static char const *pattern = "";
-
-static void run(char const *name, double (*fn)(int)) {
+static void run(char const *pattern,
+                char const *name,
+                double (*fn)(int)) {
     if (!strstr(name, pattern)) {
         return;
     }
@@ -111,11 +111,11 @@ static void run(char const *name, double (*fn)(int)) {
 }
 
 int main(int argc, char const* argv[]) {
-    if (argc > 1) { pattern = argv[1]; }
-    run("dense",     bench_dense);
-    run("dense_rev", bench_dense_rev);
-    run("sparse",    bench_sparse);
-    run("iter",      bench_iter);
-    run("lookup",    bench_lookup);
+    char const *pattern = argc > 1 ? argv[1] : "";
+    run(pattern, "dense",     bench_dense);
+    run(pattern, "dense_rev", bench_dense_rev);
+    run(pattern, "sparse",    bench_sparse);
+    run(pattern, "iter",      bench_iter);
+    run(pattern, "lookup",    bench_lookup);
     return 0;
 }
