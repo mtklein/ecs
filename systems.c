@@ -49,17 +49,17 @@ void kill(int id,
     detach(id, controlled);
 }
 
-static int d20(void) {
-    return 1 + rand()%20;
-}
-
 void combat(int attacker, int defender,
+            int (*d20)(void *ctx), void *ctx,
             struct component *stats,
             struct component *glyph,
             struct component *controlled) {
     struct stats *as = lookup(attacker, stats),
                  *ds = lookup(defender, stats);
-    if (as && ds && d20() + as->atk >= ds->ac) {
+    if (!as || !ds) { return; }
+    int const roll = d20(ctx);
+    if (roll == 1) { return; }
+    if (roll == 20 || roll + as->atk >= ds->ac) {
         ds->hp -= as->dmg;
         if (ds->hp <= 0) {
             kill(defender, stats, glyph, controlled);
@@ -68,6 +68,7 @@ void combat(int attacker, int defender,
 }
 
 void move(int dx, int dy, int w, int h,
+          int (*d20)(void *ctx), void *ctx,
           struct component *pos,
           struct component *stats,
           struct component *glyph,
@@ -83,7 +84,7 @@ void move(int dx, int dy, int w, int h,
 
         int const found = entity_at(x,y, pos);
         if (found) {
-            combat(*id,found, stats,glyph,controlled);
+            combat(*id, found, d20, ctx, stats, glyph, controlled);
         } else {
             p->x = x;
             p->y = y;

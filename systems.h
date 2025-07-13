@@ -30,11 +30,13 @@ void kill(int id,
           struct component *glyph);
 
 void combat(int attacker, int defender,
+            int (*d20)(void *ctx), void *ctx,
             struct component *stats,
-            struct component *controlled,
-            struct component *glyph);
+            struct component *glyph,
+            struct component *controlled);
 
 void move(int dx, int dy, int w, int h,
+          int (*d20)(void *ctx), void *ctx,
           struct component *pos,
           struct component *stats,
           struct component *glyph,

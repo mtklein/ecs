@@ -28,6 +28,11 @@ static void premain(void) {
 int main(int argc, char const* argv[]) {
     srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
 
+    static int d20(void *ctx) {
+        (void)ctx;
+        return 1 + rand()%20;
+    }
+
     int next_id = 1;
 
     __attribute__((cleanup(reset)))
@@ -67,10 +72,10 @@ int main(int argc, char const* argv[]) {
         switch (getch()) {
             case 'q': return 0;
 
-            case 'h': move(-1,0,w,h, &pos,&stats,&glyph,&controlled); break;
-            case 'j': move(0,+1,w,h, &pos,&stats,&glyph,&controlled); break;
-            case 'k': move(0,-1,w,h, &pos,&stats,&glyph,&controlled); break;
-            case 'l': move(+1,0,w,h, &pos,&stats,&glyph,&controlled); break;
+            case 'h': move(-1,0,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
+            case 'j': move(0,+1,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
+            case 'k': move(0,-1,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
+            case 'l': move(+1,0,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
         }
         printf("\033[%dA",h);
     }
