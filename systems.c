@@ -1,5 +1,4 @@
 #include "systems.h"
-#include <stdlib.h>
 
 void draw(char *fb, int w, int h,
           struct component const *pos,
