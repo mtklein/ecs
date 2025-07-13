@@ -25,13 +25,24 @@ static void premain(void) {
     setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }
 
+static unsigned rng_state;
+
+static void rng_seed(unsigned seed) {
+    rng_state = seed;
+}
+
+static unsigned rng_next(void) {
+    rng_state = rng_state*1103515245u + 12345u;
+    return rng_state;
+}
+
 static int d20(void *ctx) {
     (void)ctx;
-    return 1 + rand()%20;
+    return 1 + (int)(rng_next()%20);
 }
 
 int main(int argc, char const* argv[]) {
-    srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
+    rng_seed((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
 
     int next_id = 1;
 
