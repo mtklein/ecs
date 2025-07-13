@@ -5,21 +5,17 @@ void draw(struct cell *fb, int w, int h,
           struct component const *glyph,
           struct component const *disp) {
     for (int i = 0; i < w*h; i++) {
-        fb[i] = (struct cell){'.', COLOR_DEFAULT};
+        fb[i] = (struct cell){'.', -1};
     }
     for (int const *id = pos->id; id < pos->id + pos->n; id++) {
-        struct pos         const *p = lookup(*id, pos);
-        struct glyph       const *g = lookup(*id, glyph);
-        struct disposition const *d = lookup(*id, disp);
+        struct pos   const *p = lookup(*id, pos);
+        struct glyph const *g = lookup(*id, glyph);
+        enum disposition *d = lookup(*id, disp);
         if (g && 0 <= p->x && p->x < w
               && 0 <= p->y && p->y < h) {
-            char color = COLOR_DEFAULT;
+            signed char color = -1;
             if (d) {
-                if (d->kind == DISPOSITION_IN_PARTY) { color = COLOR_GREEN; }
-                else if (d->kind == DISPOSITION_FRIENDLY) { color = COLOR_BLUE; }
-                else if (d->kind == DISPOSITION_HOSTILE) { color = COLOR_RED; }
-                else if (d->kind == DISPOSITION_NEUTRAL) { color = COLOR_YELLOW; }
-                else if (d->kind == DISPOSITION_MADDENED) { color = COLOR_PURPLE; }
+                color = (signed char)*d;
             }
             fb[p->y*w + p->x] = (struct cell){g->ch, color};
         }
@@ -41,8 +37,8 @@ int entity_at(int x, int y,
 _Bool alive(struct component const *stats,
             struct component const *disp) {
     for (int const *id = disp->id; id < disp->id + disp->n; id++) {
-        struct disposition const *d = lookup(*id, disp);
-        if (d->kind == DISPOSITION_IN_PARTY) {
+        enum disposition *d = lookup(*id, disp);
+        if (*d == DISPOSITION_IN_PARTY) {
             struct stats *s = lookup(*id, stats);
             if (s && s->hp > 0) {
                 return 1;

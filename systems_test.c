@@ -13,24 +13,24 @@ test(draw) {
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
 
     attach(1, &pos, &(struct pos){0,0});
     attach(1, &glyph, &(struct glyph){'a'});
     attach(2, &pos, &(struct pos){2,1});
     attach(2, &glyph, &(struct glyph){'b'});
-    attach(1, &disp, &(struct disposition){DISPOSITION_IN_PARTY});
-    attach(2, &disp, &(struct disposition){DISPOSITION_HOSTILE});
+    attach(1, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
+    attach(2, &disp, &(enum disposition){DISPOSITION_HOSTILE});
     attach(3, &pos, &(struct pos){4,4});
     attach(3, &glyph, &(struct glyph){'c'});
 
     draw(fb,w,h,&pos,&glyph,&disp);
 
-    expect(fb[0].ch == 'a' && fb[0].color == COLOR_GREEN);
-    expect(fb[5].ch == 'b' && fb[5].color == COLOR_RED);
+    expect(fb[0].ch == 'a' && fb[0].color == DISPOSITION_IN_PARTY);
+    expect(fb[5].ch == 'b' && fb[5].color == DISPOSITION_HOSTILE);
     for (int i = 0; i < w*h; i++) {
         if (i == 0 || i == 5) { continue; }
-        expect(fb[i].ch == '.' && fb[i].color == COLOR_DEFAULT);
+        expect(fb[i].ch == '.' && fb[i].color == -1);
     }
 }
 
@@ -48,12 +48,12 @@ test(entity_at) {
 test(alive) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
 
     attach(1, &stats, &(struct stats){.hp=0});
-    attach(1, &disp, &(struct disposition){DISPOSITION_IN_PARTY});
+    attach(1, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
     attach(2, &stats, &(struct stats){.hp=5});
-    attach(2, &disp, &(struct disposition){DISPOSITION_IN_PARTY});
+    attach(2, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
 
     expect(alive(&stats,&disp));
 
@@ -138,17 +138,17 @@ test(move) {
 
 
 test(draw_empty) {
-    struct cell fb[1] = {{'q',COLOR_DEFAULT}};
+    struct cell fb[1] = {{'q',-1}};
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){0,0});
     detach(1,&pos);
     attach(1,&glyph,&(struct glyph){'@'});
     detach(1,&glyph);
     draw(fb,0,0,&pos,&glyph,&disp);
-    expect(fb[0].ch == 'q' && fb[0].color == COLOR_DEFAULT);
+    expect(fb[0].ch == 'q' && fb[0].color == -1);
 }
 
 test(draw_missing_glyph) {
@@ -157,12 +157,24 @@ test(draw_missing_glyph) {
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){1,1});
     draw(fb,W,H,&pos,&glyph,&disp);
     for (int i = 0; i < W*H; i++) {
-        expect(fb[i].ch == '.' && fb[i].color == COLOR_DEFAULT);
+        expect(fb[i].ch == '.' && fb[i].color == -1);
     }
+}
+
+test(draw_missing_disp) {
+    struct cell fb[1];
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
+    attach(1,&pos,&(struct pos){0,0});
+    attach(1,&glyph,&(struct glyph){'a'});
+    draw(fb,1,1,&pos,&glyph,&disp);
+    expect(fb[0].ch == 'a' && fb[0].color == -1);
 }
 
 test(draw_branches) {
@@ -171,7 +183,7 @@ test(draw_branches) {
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){-1,0});
     attach(1,&glyph,&(struct glyph){'a'});
     attach(2,&pos,&(struct pos){0,-1});
@@ -181,49 +193,54 @@ test(draw_branches) {
     attach(4,&pos,&(struct pos){0,0});
     attach(4,&glyph,&(struct glyph){'d'});
     draw(fb,W,H,&pos,&glyph,&disp);
-    expect(fb[0].ch == 'd' && fb[0].color == COLOR_DEFAULT);
+    expect(fb[0].ch == 'd' && fb[0].color == -1);
 }
 
 test(draw_colors) {
-    enum { W = 6, H = 1 };
+    enum { W = 7, H = 1 };
     struct cell fb[W*H];
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
                      glyph = {.size = sizeof(struct glyph)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
 
     attach(1,&pos,&(struct pos){0,0});
     attach(1,&glyph,&(struct glyph){'a'});
-    attach(1,&disp,&(struct disposition){DISPOSITION_IN_PARTY});
+    attach(1,&disp,&(enum disposition){DISPOSITION_IN_PARTY});
 
     attach(2,&pos,&(struct pos){1,0});
     attach(2,&glyph,&(struct glyph){'b'});
-    attach(2,&disp,&(struct disposition){DISPOSITION_FRIENDLY});
+    attach(2,&disp,&(enum disposition){DISPOSITION_FRIENDLY});
 
     attach(3,&pos,&(struct pos){2,0});
     attach(3,&glyph,&(struct glyph){'c'});
-    attach(3,&disp,&(struct disposition){DISPOSITION_NEUTRAL});
+    attach(3,&disp,&(enum disposition){DISPOSITION_NEUTRAL});
 
     attach(4,&pos,&(struct pos){3,0});
     attach(4,&glyph,&(struct glyph){'d'});
-    attach(4,&disp,&(struct disposition){DISPOSITION_HOSTILE});
+    attach(4,&disp,&(enum disposition){DISPOSITION_HOSTILE});
 
     attach(5,&pos,&(struct pos){4,0});
     attach(5,&glyph,&(struct glyph){'e'});
-    attach(5,&disp,&(struct disposition){DISPOSITION_MADDENED});
+    attach(5,&disp,&(enum disposition){DISPOSITION_MADDENED});
 
     attach(6,&pos,&(struct pos){5,0});
     attach(6,&glyph,&(struct glyph){'f'});
-    attach(6,&disp,&(struct disposition){(enum disposition_kind)99});
+    attach(6,&disp,&(enum disposition){(enum disposition)99});
+
+    attach(7,&pos,&(struct pos){6,0});
+    attach(7,&glyph,&(struct glyph){'g'});
+    attach(7,&disp,&(enum disposition){(enum disposition)-1});
 
     draw(fb,W,H,&pos,&glyph,&disp);
 
-    expect(fb[0].color == COLOR_GREEN);
-    expect(fb[1].color == COLOR_BLUE);
-    expect(fb[2].color == COLOR_YELLOW);
-    expect(fb[3].color == COLOR_RED);
-    expect(fb[4].color == COLOR_PURPLE);
-    expect(fb[5].color == COLOR_DEFAULT);
+    expect(fb[0].color == DISPOSITION_IN_PARTY);
+    expect(fb[1].color == DISPOSITION_FRIENDLY);
+    expect(fb[2].color == DISPOSITION_NEUTRAL);
+    expect(fb[3].color == DISPOSITION_HOSTILE);
+    expect(fb[4].color == DISPOSITION_MADDENED);
+    expect(fb[5].color == (signed char)99);
+    expect(fb[6].color == -1);
 }
 
 test(entity_at_empty) {
@@ -246,9 +263,9 @@ test(entity_at_same_x) {
 test(alive_empty) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&stats,&(struct stats){0});
-    attach(1,&disp, &(struct disposition){DISPOSITION_IN_PARTY});
+    attach(1,&disp, &(enum disposition){DISPOSITION_IN_PARTY});
     detach(1,&stats);
     detach(1,&disp);
     expect(!alive(&stats,&disp));
@@ -257,17 +274,17 @@ test(alive_empty) {
 test(alive_missing_stats) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     disp  = {.size = sizeof(struct disposition)};
-    attach(1,&disp, &(struct disposition){DISPOSITION_IN_PARTY});
+                     disp  = {.size = sizeof(enum disposition)};
+    attach(1,&disp, &(enum disposition){DISPOSITION_IN_PARTY});
     expect(!alive(&stats,&disp));
 }
 
 test(alive_not_party) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     disp  = {.size = sizeof(struct disposition)};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&stats,&(struct stats){.hp=5});
-    attach(1,&disp, &(struct disposition){DISPOSITION_FRIENDLY});
+    attach(1,&disp, &(enum disposition){DISPOSITION_FRIENDLY});
     expect(!alive(&stats,&disp));
 }
 

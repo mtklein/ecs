@@ -14,7 +14,7 @@ struct glyph {
     char ch;
 };
 
-enum disposition_kind {
+enum disposition {
     DISPOSITION_IN_PARTY,
     DISPOSITION_FRIENDLY,
     DISPOSITION_HOSTILE,
@@ -22,22 +22,9 @@ enum disposition_kind {
     DISPOSITION_MADDENED,
 };
 
-struct disposition {
-    enum disposition_kind kind;
-};
-
-enum color {
-    COLOR_DEFAULT,
-    COLOR_GREEN,
-    COLOR_BLUE,
-    COLOR_YELLOW,
-    COLOR_RED,
-    COLOR_PURPLE,
-};
-
 struct cell {
-    char ch;
-    char color;
+    char        ch;
+    signed char color; /* -1 for default */
 };
 
 void draw(struct cell *fb, int w, int h,

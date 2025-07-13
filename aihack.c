@@ -46,7 +46,7 @@ int main(int argc, char const* argv[]) {
         pos   = {.size=sizeof(struct pos)},
         stats = {.size=sizeof(struct stats)},
         glyph = {.size=sizeof(struct glyph)},
-        controlled={0}, disp={.size=sizeof(struct disposition)};
+        controlled={0}, disp={.size=sizeof(enum disposition)};
 
     {
         int const player = next_id++;
@@ -54,7 +54,7 @@ int main(int argc, char const* argv[]) {
         attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
         attach(player, &glyph, &(struct glyph){'@'});
         attach(player, &controlled, NULL);
-        attach(player, &disp, &(struct disposition){DISPOSITION_IN_PARTY});
+        attach(player, &disp, &(enum disposition){DISPOSITION_IN_PARTY});
     }
 
     {
@@ -62,7 +62,7 @@ int main(int argc, char const* argv[]) {
         attach(imp, &pos  , &(struct pos){3,1});
         attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
         attach(imp, &glyph, &(struct glyph){'i'});
-        attach(imp, &disp , &(struct disposition){DISPOSITION_HOSTILE});
+        attach(imp, &disp , &(enum disposition){DISPOSITION_HOSTILE});
     }
 
     int const w=10, h=5;
@@ -72,17 +72,20 @@ int main(int argc, char const* argv[]) {
         draw(fb,w,h, &pos,&glyph,&disp);
 
         static char const *ansi[] = {
-            "\033[0m",
-            "\033[32m",
-            "\033[34m",
-            "\033[33m",
-            "\033[31m",
-            "\033[35m",
+            "\033[32m", /* in-party */
+            "\033[34m", /* friendly */
+            "\033[31m", /* hostile */
+            "\033[33m", /* neutral */
+            "\033[35m", /* maddened */
         };
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 struct cell c = fb[y*w + x];
-                printf("%s%c\033[0m", ansi[(int)c.color], c.ch);
+                char const *color = "\033[0m";
+                if (0 <= c.color && c.color < (int)(sizeof ansi/sizeof *ansi)) {
+                    color = ansi[c.color];
+                }
+                printf("%s%c\033[0m", color, c.ch);
             }
             putchar('\n');
         }
