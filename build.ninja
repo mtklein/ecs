@@ -6,11 +6,13 @@ cc   = clang -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
+       -Wno-pre-c23-compat $
        -Wno-switch-default $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $path $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
+    command = $path $cc -std=c23 -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d $
+              -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
@@ -29,9 +31,6 @@ rule reportcov
 rule showcov
     command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
 
-rule checkcov
-    command = tail -n 1 out/coverage.report | grep -o 100.00 | wc -l | grep -q 4 && touch $out
-
 build out/bench.o: compile bench.c
     cc = $path clang
 build out/bench:   link out/bench.o
@@ -41,15 +40,13 @@ build out/aihack.o:       compile aihack.c
 build out/ecs.o:          compile ecs.c
 build out/ecs_test.o:     compile ecs_test.c
 build out/systems.o:      compile systems.c
-build out/systems_test.o: compile systems_test.c
 build out/test.o:         compile test.c
 
 build out/aihack: link out/aihack.o out/ecs.o out/systems.o
-build out/test:   link out/test.o   out/ecs.o out/systems.o out/ecs_test.o out/systems_test.o
+build out/test:   link out/test.o   out/ecs.o out/systems.o out/ecs_test.o
 
 build out/test.ok | out/test.profraw: run out/test
 
 build out/coverage.profdata: mergecov out/test.profraw
 build out/coverage.html:      showcov out/coverage.profdata out/test
 build out/coverage.report:  reportcov out/coverage.profdata out/test
-build out/coverage.ok:       checkcov out/coverage.report

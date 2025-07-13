@@ -8,26 +8,29 @@ static int constant_roll(void *ctx) {
 test(draw) {
     enum { W = 3, H = 2 };
     int const w = W, h = H;
-    char fb[W*H];
+    struct pixel fb[W*H];
 
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
-                     glyph = {.size = sizeof(struct glyph)};
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
 
     attach(1, &pos, &(struct pos){0,0});
     attach(1, &glyph, &(struct glyph){'a'});
     attach(2, &pos, &(struct pos){2,1});
     attach(2, &glyph, &(struct glyph){'b'});
+    attach(1, &disp, &(enum disposition){PARTY});
+    attach(2, &disp, &(enum disposition){HOSTILE});
     attach(3, &pos, &(struct pos){4,4});
     attach(3, &glyph, &(struct glyph){'c'});
 
-    draw(fb,w,h,&pos,&glyph);
+    draw(fb,w,h,&pos,&glyph,&disp);
 
-    expect(fb[0] == 'a');
-    expect(fb[5] == 'b');
+    expect(fb[0].glyph.ch == 'a' && fb[0].disp == PARTY);
+    expect(fb[5].glyph.ch == 'b' && fb[5].disp == HOSTILE);
     for (int i = 0; i < w*h; i++) {
         if (i == 0 || i == 5) { continue; }
-        expect(fb[i] == '.');
+        expect(fb[i].glyph.ch == '.' && fb[i].disp == INERT);
     }
 }
 
@@ -45,31 +48,32 @@ test(entity_at) {
 test(alive) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     party = {0};
+                     disp  = {.size = sizeof(enum disposition)};
 
     attach(1, &stats, &(struct stats){.hp=0});
-    attach(1, &party, NULL);
+    attach(1, &disp, &(enum disposition){PARTY});
     attach(2, &stats, &(struct stats){.hp=5});
-    attach(2, &party, NULL);
+    attach(2, &disp, &(enum disposition){PARTY});
 
-    expect(alive(&stats,&party));
+    expect(alive(&stats,&disp));
 
     struct stats *s = lookup(2, &stats);
     s->hp = 0;
-    expect(!alive(&stats,&party));
+    expect(!alive(&stats,&disp));
 }
 
 test(kill) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
                      glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)},
                      ctrl  = {0};
 
     attach(1, &stats, &(struct stats){.hp=5});
     attach(1, &glyph, &(struct glyph){'@'});
     attach(1, &ctrl, NULL);
 
-    kill(1,&stats,&glyph,&ctrl);
+    kill(1,&stats,&glyph,&disp,&ctrl);
 
     expect(!lookup(1,&stats));
     struct glyph *g = lookup(1,&glyph);
@@ -135,37 +139,52 @@ test(move) {
 
 
 test(draw_empty) {
-    char fb[1] = {'q'};
+    struct pixel fb[] = {{{'q'},INERT}};
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
-                     glyph = {.size = sizeof(struct glyph)};
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){0,0});
     detach(1,&pos);
     attach(1,&glyph,&(struct glyph){'@'});
     detach(1,&glyph);
-    draw(fb,0,0,&pos,&glyph);
-    expect(fb[0] == 'q');
+    draw(fb,0,0,&pos,&glyph,&disp);
+    expect(fb[0].ch == 'q' && fb[0].color == -1);
 }
 
 test(draw_missing_glyph) {
     enum { W = 2, H = 2 };
-    char fb[W*H];
+    struct pixel fb[W*H];
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
-                     glyph = {.size = sizeof(struct glyph)};
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){1,1});
-    draw(fb,W,H,&pos,&glyph);
+    draw(fb,W,H,&pos,&glyph,&disp);
     for (int i = 0; i < W*H; i++) {
-        expect(fb[i] == '.');
+        expect(fb[i].ch == '.' && fb[i].color == -1);
     }
+}
+
+test(draw_missing_disp) {
+    struct pixel fb[1];
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
+    attach(1,&pos,&(struct pos){0,0});
+    attach(1,&glyph,&(struct glyph){'a'});
+    draw(fb,1,1,&pos,&glyph,&disp);
+    expect(fb[0].ch == 'a' && fb[0].color == -1);
 }
 
 test(draw_branches) {
     enum { W = 2, H = 2 };
-    char fb[W*H];
+    struct cell fb[W*H];
     __attribute__((cleanup(reset)))
     struct component pos   = {.size = sizeof(struct pos)},
-                     glyph = {.size = sizeof(struct glyph)};
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&pos,&(struct pos){-1,0});
     attach(1,&glyph,&(struct glyph){'a'});
     attach(2,&pos,&(struct pos){0,-1});
@@ -174,8 +193,55 @@ test(draw_branches) {
     attach(3,&glyph,&(struct glyph){'c'});
     attach(4,&pos,&(struct pos){0,0});
     attach(4,&glyph,&(struct glyph){'d'});
-    draw(fb,W,H,&pos,&glyph);
-    expect(fb[0] == 'd');
+    draw(fb,W,H,&pos,&glyph,&disp);
+    expect(fb[0].ch == 'd' && fb[0].color == -1);
+}
+
+test(draw_colors) {
+    enum { W = 7, H = 1 };
+    struct cell fb[W*H];
+    __attribute__((cleanup(reset)))
+    struct component pos   = {.size = sizeof(struct pos)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     disp  = {.size = sizeof(enum disposition)};
+
+    attach(1,&pos,&(struct pos){0,0});
+    attach(1,&glyph,&(struct glyph){'a'});
+    attach(1,&disp,&(enum disposition){DISPOSITION_IN_PARTY});
+
+    attach(2,&pos,&(struct pos){1,0});
+    attach(2,&glyph,&(struct glyph){'b'});
+    attach(2,&disp,&(enum disposition){DISPOSITION_FRIENDLY});
+
+    attach(3,&pos,&(struct pos){2,0});
+    attach(3,&glyph,&(struct glyph){'c'});
+    attach(3,&disp,&(enum disposition){DISPOSITION_NEUTRAL});
+
+    attach(4,&pos,&(struct pos){3,0});
+    attach(4,&glyph,&(struct glyph){'d'});
+    attach(4,&disp,&(enum disposition){DISPOSITION_HOSTILE});
+
+    attach(5,&pos,&(struct pos){4,0});
+    attach(5,&glyph,&(struct glyph){'e'});
+    attach(5,&disp,&(enum disposition){DISPOSITION_MADDENED});
+
+    attach(6,&pos,&(struct pos){5,0});
+    attach(6,&glyph,&(struct glyph){'f'});
+    attach(6,&disp,&(enum disposition){(enum disposition)99});
+
+    attach(7,&pos,&(struct pos){6,0});
+    attach(7,&glyph,&(struct glyph){'g'});
+    attach(7,&disp,&(enum disposition){(enum disposition)-1});
+
+    draw(fb,W,H,&pos,&glyph,&disp);
+
+    expect(fb[0].color == DISPOSITION_IN_PARTY);
+    expect(fb[1].color == DISPOSITION_FRIENDLY);
+    expect(fb[2].color == DISPOSITION_NEUTRAL);
+    expect(fb[3].color == DISPOSITION_HOSTILE);
+    expect(fb[4].color == DISPOSITION_MADDENED);
+    expect(fb[5].color == (signed char)99);
+    expect(fb[6].color == -1);
 }
 
 test(entity_at_empty) {
@@ -198,20 +264,29 @@ test(entity_at_same_x) {
 test(alive_empty) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     party = {0};
+                     disp  = {.size = sizeof(enum disposition)};
     attach(1,&stats,&(struct stats){0});
-    attach(1,&party,NULL);
+    attach(1,&disp, &(enum disposition){DISPOSITION_IN_PARTY});
     detach(1,&stats);
-    detach(1,&party);
-    expect(!alive(&stats,&party));
+    detach(1,&disp);
+    expect(!alive(&stats,&disp));
 }
 
 test(alive_missing_stats) {
     __attribute__((cleanup(reset)))
     struct component stats = {.size = sizeof(struct stats)},
-                     party = {0};
-    attach(1,&party,NULL);
-    expect(!alive(&stats,&party));
+                     disp  = {.size = sizeof(enum disposition)};
+    attach(1,&disp, &(enum disposition){DISPOSITION_IN_PARTY});
+    expect(!alive(&stats,&disp));
+}
+
+test(alive_not_party) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     disp  = {.size = sizeof(enum disposition)};
+    attach(1,&stats,&(struct stats){.hp=5});
+    attach(1,&disp, &(enum disposition){DISPOSITION_FRIENDLY});
+    expect(!alive(&stats,&disp));
 }
 
 test(combat_miss) {
