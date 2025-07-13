@@ -6,12 +6,12 @@ struct pos {
     int x,y;
 };
 
-struct glyph {
-    char ch;
-};
-
 struct stats {
     int hp,ac,atk,dmg;
+};
+
+struct glyph {
+    char ch;
 };
 
 void draw(char *fb, int w, int h,
@@ -26,8 +26,8 @@ _Bool alive(struct component const *stats,
 
 void kill(int id,
           struct component *stats,
-          struct component *controlled,
-          struct component *glyph);
+          struct component *glyph,
+          struct component *controlled);
 
 void combat(int attacker, int defender,
             int (*d20)(void *ctx), void *ctx,

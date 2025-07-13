@@ -56,13 +56,15 @@ void combat(int attacker, int defender,
             struct component *controlled) {
     struct stats *as = lookup(attacker, stats),
                  *ds = lookup(defender, stats);
-    if (!as || !ds) { return; }
-    int const roll = d20(ctx);
-    if (roll == 1) { return; }
-    if (roll == 20 || roll + as->atk >= ds->ac) {
-        ds->hp -= as->dmg;
-        if (ds->hp <= 0) {
-            kill(defender, stats, glyph, controlled);
+    if (as && ds) {
+        int const roll = d20(ctx);
+        if (roll > 1) {
+            if (roll == 20 || roll + as->atk >= ds->ac) {
+                ds->hp -= as->dmg;
+                if (ds->hp <= 0) {
+                    kill(defender, stats, glyph, controlled);
+                }
+            }
         }
     }
 }
@@ -84,7 +86,7 @@ void move(int dx, int dy, int w, int h,
 
         int const found = entity_at(x,y, pos);
         if (found) {
-            combat(*id, found, d20, ctx, stats, glyph, controlled);
+            combat(*id,found, d20,ctx, stats,glyph,controlled);
         } else {
             p->x = x;
             p->y = y;
