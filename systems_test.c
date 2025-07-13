@@ -1,6 +1,10 @@
 #include "systems.h"
 #include "test.h"
 
+static int constant_roll(void *ctx) {
+    return *(int *)ctx;
+}
+
 test(draw) {
     enum { W = 3, H = 2 };
     int const w = W, h = H;
@@ -86,7 +90,9 @@ test(combat) {
     attach(defender,&stats,&(struct stats){.hp=3,.ac=0,.atk=0,.dmg=0});
     attach(defender,&glyph,&(struct glyph){'e'});
 
-    combat(attacker,defender,&stats,&glyph,&ctrl);
+    int roll = 10;
+    combat(attacker, defender, constant_roll, &roll,
+           &stats, &glyph, &ctrl);
 
     expect(!lookup(defender,&stats));
     struct glyph *g = lookup(defender,&glyph);
@@ -112,17 +118,18 @@ test(move) {
     attach(enemy,&stats,&(struct stats){.hp=4,.ac=0,.atk=0,.dmg=0});
     attach(enemy,&glyph,&(struct glyph){'e'});
 
-    move(1,0,w,h,&pos,&stats,&glyph,&ctrl);
+    int roll = 10;
+    move(1,0,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl);
     struct pos *p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
 
-    move(1,0,w,h,&pos,&stats,&glyph,&ctrl);
+    move(1,0,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl);
     p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
     struct glyph *g = lookup(enemy,&glyph);
     expect(g && g->ch == 'x');
 
-    move(-3,0,w,h,&pos,&stats,&glyph,&ctrl);
+    move(-3,0,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl);
     p = lookup(player,&pos);
     expect(p->x == 2 && p->y == 1);
 }
@@ -216,7 +223,8 @@ test(combat_miss) {
     int a = 1, d = 2;
     attach(a,&stats,&(struct stats){.hp=5,.ac=10,.atk=0,.dmg=1});
     attach(d,&stats,&(struct stats){.hp=5,.ac=22,.atk=0,.dmg=0});
-    combat(a,d,&stats,&glyph,&ctrl);
+    int roll = 10;
+    combat(a, d, constant_roll, &roll, &stats,&glyph,&ctrl);
     struct stats *s = lookup(d,&stats);
     expect(s && s->hp == 5);
 }
@@ -229,7 +237,8 @@ test(combat_damage) {
     int a = 1, d = 2;
     attach(a,&stats,&(struct stats){.hp=5,.ac=10,.atk=2,.dmg=3});
     attach(d,&stats,&(struct stats){.hp=10,.ac=0,.atk=0,.dmg=0});
-    combat(a,d,&stats,&glyph,&ctrl);
+    int roll = 10;
+    combat(a, d, constant_roll, &roll, &stats,&glyph,&ctrl);
     struct stats *s = lookup(d,&stats);
     expect(s && s->hp == 7);
 }
@@ -240,10 +249,11 @@ test(combat_missing) {
                      glyph = {.size = sizeof(struct glyph)},
                      ctrl  = {0};
     attach(2,&stats,&(struct stats){.hp=5,.ac=0,.atk=0,.dmg=0});
-    combat(1,2,&stats,&glyph,&ctrl);
+    int roll = 10;
+    combat(1, 2, constant_roll, &roll, &stats,&glyph,&ctrl);
     struct stats *s = lookup(2,&stats);
     expect(s && s->hp == 5);
-    combat(1,3,&stats,&glyph,&ctrl);
+    combat(1, 3, constant_roll, &roll, &stats,&glyph,&ctrl);
     expect(!lookup(3,&stats));
 }
 
@@ -253,7 +263,8 @@ test(combat_no_defender) {
                      glyph = {.size = sizeof(struct glyph)},
                      ctrl  = {0};
     attach(1,&stats,&(struct stats){.hp=5,.ac=0,.atk=2,.dmg=2});
-    combat(1,2,&stats,&glyph,&ctrl);
+    int roll = 10;
+    combat(1, 2, constant_roll, &roll, &stats,&glyph,&ctrl);
     expect(!lookup(2,&glyph));
 }
 
@@ -265,7 +276,8 @@ test(move_none) {
                      ctrl  = {0};
     attach(1,&ctrl,NULL);
     detach(1,&ctrl);
-    move(1,1,5,5,&pos,&stats,&glyph,&ctrl);
+    int roll = 10;
+    move(1,1,5,5, constant_roll,&roll, &pos,&stats,&glyph,&ctrl);
 }
 
 test(move_bounds) {
@@ -279,15 +291,44 @@ test(move_bounds) {
     attach(id,&pos,&(struct pos){0,0});
     attach(id,&ctrl,NULL);
 
-    move(0,-1,w,h,&pos,&stats,&glyph,&ctrl); /* y<0 */
+    int roll = 10;
+    move(0,-1,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl); /* y<0 */
     struct pos *p = lookup(id,&pos);
     expect(p->x == 0 && p->y == 0);
 
     p->x = w-1; p->y = 0;
-    move(1,0,w,h,&pos,&stats,&glyph,&ctrl); /* x>=w */
+    move(1,0,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl); /* x>=w */
     expect(p->x == w-1 && p->y == 0);
 
     p->x = 0; p->y = h-1;
-    move(0,1,w,h,&pos,&stats,&glyph,&ctrl); /* y>=h */
+    move(0,1,w,h, constant_roll,&roll, &pos,&stats,&glyph,&ctrl); /* y>=h */
     expect(p->x == 0 && p->y == h-1);
+}
+
+test(combat_crit_success) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    int a = 1, d = 2;
+    attach(a,&stats,&(struct stats){.hp=5,.ac=0,.atk=0,.dmg=2});
+    attach(d,&stats,&(struct stats){.hp=5,.ac=100,.atk=0,.dmg=0});
+    int roll = 20;
+    combat(a, d, constant_roll, &roll, &stats,&glyph,&ctrl);
+    struct stats *s = lookup(d,&stats);
+    expect(s && s->hp == 3);
+}
+
+test(combat_crit_fail) {
+    __attribute__((cleanup(reset)))
+    struct component stats = {.size = sizeof(struct stats)},
+                     glyph = {.size = sizeof(struct glyph)},
+                     ctrl  = {0};
+    int a = 1, d = 2;
+    attach(a,&stats,&(struct stats){.hp=5,.ac=0,.atk=100,.dmg=2});
+    attach(d,&stats,&(struct stats){.hp=5,.ac=0,.atk=0,.dmg=0});
+    int roll = 1;
+    combat(a, d, constant_roll, &roll, &stats,&glyph,&ctrl);
+    struct stats *s = lookup(d,&stats);
+    expect(s && s->hp == 5);
 }

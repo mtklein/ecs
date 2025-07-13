@@ -10,9 +10,15 @@ General guidelines:
 7) If asked to do more than you can handle in one PR instead act as an architect,
    sketching the code interfaces and not-yet-working tests.  Leave follow-up TODOs.
 
+When creating PRs for this project,
+  - always run the exact command `ninja` to build and test all targets; and
+  - add any changes to coverage.report to the PR, making sure coverage stays at 100%.
+
 Specific C style notes:
 - Allow lines up to 100 columns.
 - Always use braces with if, for, do, while, etc.
+- Prefer normal nested if/else logic over early return,
+  but carefully factor the logic so it is clear and not too deeply nested.
 - Count bytes with `size_t` and everything else with `int`.
 - Use const liberally, especially with descriptively named local variables...
 - ... but the constness of a pointer is much less important than the constness
@@ -45,3 +51,27 @@ Specific C style notes:
     +    int       *sum = ctx;
     +    *sum += *val;
      }
+
+- Generally declare related function parameters on a single line together if there is room
+  and pass related function arguments in close grouping with no whitespace between.
+  Always list a system's components last, declared one per line, passed as related arguments:
+
+    void work(int unit[], int units,
+              void (*cb)(int, void *ctx), void *ctx) { ... }
+    ...
+    work(unit,units, my_cb,ctx);
+
+    void some_system(int id,
+                     struct component *a,
+                     struct component *b,
+                     struct component *c);
+    ...
+    some_system(id, a,b,c);
+
+    void some_other_system(int x, int y,
+                           struct component *a,
+                           struct component *b,
+                           struct component *c,
+                           struct component *d);
+    ...
+    some_other_system(x,y, a,b,c,d);
