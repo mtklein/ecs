@@ -79,43 +79,42 @@ static double bench_lookup(int n) {
     return elapsed;
 }
 
-static void run(char const *pattern,
-                char const *name,
-                double (*fn)(int)) {
-    if (!strstr(name, pattern)) {
-        return;
-    }
-    printf("%s\n", name);
+static void bench(char const *pattern,
+                  char const *name,
+                  double (*fn)(int)) {
+    if (strstr(name, pattern)) {
+        printf("%s\n", name);
 
-    int lgN = 10;
-    double min,max;
-    do {
-        int const N = 1<<lgN;
-        min = +1/0.0;
-        max = -1/0.0;
-        for (double const start = now(); now() - start < 1/16.0;) {
-            double const t = fn(N);
-            if (min > t) { min = t; }
-            if (max < t) { max = t; }
-        }
-        printf("%s%2d %4.1f–%4.1f%s ", lgN==10 ? "N=2^" : "    ", lgN
-                                     , min*1e9/N, max*1e9/N
-                                     , lgN==10 ? "ns" : "  ");
-        long i = 0;
-        for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("■"); }
-        for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("⬚"); }
+        int lgN = 10;
+        double min,max;
+        do {
+            int const N = 1<<lgN;
+            min = +1/0.0;
+            max = -1/0.0;
+            for (double const start = now(); now() - start < 1/16.0;) {
+                double const t = fn(N);
+                if (min > t) { min = t; }
+                if (max < t) { max = t; }
+            }
+            printf("%s%2d %4.1f–%4.1f%s ", lgN==10 ? "N=2^" : "    ", lgN
+                                         , min*1e9/N, max*1e9/N
+                                         , lgN==10 ? "ns" : "  ");
+            long i = 0;
+            for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("■"); }
+            for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("⬚"); }
+            printf("\n");
+            lgN++;
+        } while (min < max);
         printf("\n");
-        lgN++;
-    } while (min < max);
-    printf("\n");
+    }
 }
 
 int main(int argc, char const* argv[]) {
     char const *pattern = argc > 1 ? argv[1] : "";
-    run(pattern, "dense",     bench_dense);
-    run(pattern, "dense_rev", bench_dense_rev);
-    run(pattern, "sparse",    bench_sparse);
-    run(pattern, "iter",      bench_iter);
-    run(pattern, "lookup",    bench_lookup);
+    bench(pattern, "dense",     bench_dense);
+    bench(pattern, "dense_rev", bench_dense_rev);
+    bench(pattern, "sparse",    bench_sparse);
+    bench(pattern, "iter",      bench_iter);
+    bench(pattern, "lookup",    bench_lookup);
     return 0;
 }
