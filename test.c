@@ -3,7 +3,8 @@
 #include <stdlib.h>
 
 void expect_fail(char const *expr, char const *file, int line) {
-    fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr); __builtin_debugtrap();
+    fprintf(stderr, "%s:%d expect(%s)\n", file, line, expr);
+    __builtin_debugtrap();
 }
 
 __attribute__((constructor(101)))

@@ -18,16 +18,16 @@ rule link
     command = $path $cc -lm $in -o $out
 
 rule run
-    command = LLVM_PROFILE_FILE=$in.profraw ./$in > $out
+    command = env LLVM_PROFILE_FILE=$in.profraw ./$in > $out
 
 rule mergecov
     command = $path llvm-profdata merge -sparse $in -o $out
 
 rule reportcov
-    command = $path llvm-cov report -instr-profile=$in > $out
+    command = $path llvm-cov report -ignore-filename-regex=test -use-color -instr-profile=$in > $out
 
 rule showcov
-    command = $path llvm-cov show -instr-profile=$in > $out
+    command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
 
 build out/bench.o: compile bench.c
     cc = clang
@@ -46,7 +46,6 @@ build out/test:   link out/test.o   out/ecs.o out/systems.o out/ecs_test.o out/s
 
 build out/test.ok | out/test.profraw: run out/test
 
-build out/test.profdata: mergecov out/test.profraw
-build out/test.report:  reportcov out/test.profdata out/test
-build out/test.detail:    showcov out/test.profdata out/test
-
+build out/coverage.profdata: mergecov out/test.profraw
+build out/coverage.html:      showcov out/coverage.profdata out/test
+build coverage.report:      reportcov out/coverage.profdata out/test
