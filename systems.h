@@ -14,15 +14,42 @@ struct glyph {
     char ch;
 };
 
-void draw(char *fb, int w, int h,
+enum disposition_kind {
+    DISPOSITION_IN_PARTY,
+    DISPOSITION_FRIENDLY,
+    DISPOSITION_HOSTILE,
+    DISPOSITION_NEUTRAL,
+    DISPOSITION_MADDENED,
+};
+
+struct disposition {
+    enum disposition_kind kind;
+};
+
+enum color {
+    COLOR_DEFAULT,
+    COLOR_GREEN,
+    COLOR_BLUE,
+    COLOR_YELLOW,
+    COLOR_RED,
+    COLOR_PURPLE,
+};
+
+struct cell {
+    char ch;
+    char color;
+};
+
+void draw(struct cell *fb, int w, int h,
           struct component const *pos,
-          struct component const *glyph);
+          struct component const *glyph,
+          struct component const *disp);
 
 int entity_at(int x, int y,
               struct component const *pos);
 
 _Bool alive(struct component const *stats,
-            struct component const *in_party);
+            struct component const *disp);
 
 void kill(int id,
           struct component *stats,

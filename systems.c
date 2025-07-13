@@ -1,17 +1,27 @@
 #include "systems.h"
 
-void draw(char *fb, int w, int h,
+void draw(struct cell *fb, int w, int h,
           struct component const *pos,
-          struct component const *glyph) {
+          struct component const *glyph,
+          struct component const *disp) {
     for (int i = 0; i < w*h; i++) {
-        fb[i] = '.';
+        fb[i] = (struct cell){'.', COLOR_DEFAULT};
     }
     for (int const *id = pos->id; id < pos->id + pos->n; id++) {
-        struct pos   const *p = lookup(*id, pos);
-        struct glyph const *g = lookup(*id, glyph);
+        struct pos         const *p = lookup(*id, pos);
+        struct glyph       const *g = lookup(*id, glyph);
+        struct disposition const *d = lookup(*id, disp);
         if (g && 0 <= p->x && p->x < w
               && 0 <= p->y && p->y < h) {
-            fb[p->y*w + p->x] = g->ch;
+            char color = COLOR_DEFAULT;
+            if (d) {
+                if (d->kind == DISPOSITION_IN_PARTY) { color = COLOR_GREEN; }
+                else if (d->kind == DISPOSITION_FRIENDLY) { color = COLOR_BLUE; }
+                else if (d->kind == DISPOSITION_HOSTILE) { color = COLOR_RED; }
+                else if (d->kind == DISPOSITION_NEUTRAL) { color = COLOR_YELLOW; }
+                else if (d->kind == DISPOSITION_MADDENED) { color = COLOR_PURPLE; }
+            }
+            fb[p->y*w + p->x] = (struct cell){g->ch, color};
         }
     }
 }
@@ -29,11 +39,14 @@ int entity_at(int x, int y,
 }
 
 _Bool alive(struct component const *stats,
-            struct component const *in_party) {
-    for (int const *id = in_party->id; id < in_party->id + in_party->n; id++) {
-        struct stats *s = lookup(*id, stats);
-        if (s && s->hp > 0) {
-            return 1;
+            struct component const *disp) {
+    for (int const *id = disp->id; id < disp->id + disp->n; id++) {
+        struct disposition const *d = lookup(*id, disp);
+        if (d->kind == DISPOSITION_IN_PARTY) {
+            struct stats *s = lookup(*id, stats);
+            if (s && s->hp > 0) {
+                return 1;
+            }
         }
     }
     return 0;

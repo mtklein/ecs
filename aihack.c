@@ -46,7 +46,7 @@ int main(int argc, char const* argv[]) {
         pos   = {.size=sizeof(struct pos)},
         stats = {.size=sizeof(struct stats)},
         glyph = {.size=sizeof(struct glyph)},
-        controlled={0}, in_party={0};
+        controlled={0}, disp={.size=sizeof(struct disposition)};
 
     {
         int const player = next_id++;
@@ -54,7 +54,7 @@ int main(int argc, char const* argv[]) {
         attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
         attach(player, &glyph, &(struct glyph){'@'});
         attach(player, &controlled, NULL);
-        attach(player, &in_party  , NULL);
+        attach(player, &disp, &(struct disposition){DISPOSITION_IN_PARTY});
     }
 
     {
@@ -62,16 +62,28 @@ int main(int argc, char const* argv[]) {
         attach(imp, &pos  , &(struct pos){3,1});
         attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
         attach(imp, &glyph, &(struct glyph){'i'});
+        attach(imp, &disp , &(struct disposition){DISPOSITION_HOSTILE});
     }
 
     int const w=10, h=5;
-    char *fb = calloc((size_t)(w*h), sizeof *fb);
+    struct cell *fb = calloc((size_t)(w*h), sizeof *fb);
 
-    while (alive(&stats, &in_party)) {
-        draw(fb,w,h, &pos,&glyph);
+    while (alive(&stats, &disp)) {
+        draw(fb,w,h, &pos,&glyph,&disp);
 
+        static char const *ansi[] = {
+            "\033[0m",
+            "\033[32m",
+            "\033[34m",
+            "\033[33m",
+            "\033[31m",
+            "\033[35m",
+        };
         for (int y = 0; y < h; y++) {
-            fwrite(fb + (size_t)(y*w), sizeof *fb, (size_t)w, stdout);
+            for (int x = 0; x < w; x++) {
+                struct cell c = fb[y*w + x];
+                printf("%s%c\033[0m", ansi[(int)c.color], c.ch);
+            }
             putchar('\n');
         }
 
