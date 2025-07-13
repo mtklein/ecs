@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
-#include <time.h>
 #include <unistd.h>
 
 static int getch(void) {
@@ -25,13 +24,20 @@ static void premain(void) {
     setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }
 
+static unsigned rng(unsigned seed) {
+    __builtin_mul_overflow(seed, 1103515245u, &seed);
+    __builtin_add_overflow(seed,      12345u, &seed);
+    return seed;
+}
+
 static int d20(void *ctx) {
-    (void)ctx;
-    return 1 + rand()%20;
+    unsigned *seed = ctx;
+    *seed = rng(*seed);
+    return 1 + (int)(*seed % 20);
 }
 
 int main(int argc, char const* argv[]) {
-    srand((unsigned)(argc > 1 ? atoi(argv[1]) : time(NULL)));
+    unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
     int next_id = 1;
 
@@ -72,10 +78,10 @@ int main(int argc, char const* argv[]) {
         switch (getch()) {
             case 'q': return 0;
 
-            case 'h': move(-1,0,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
-            case 'j': move(0,+1,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
-            case 'k': move(0,-1,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
-            case 'l': move(+1,0,w,h, d20,NULL, &pos,&stats,&glyph,&controlled); break;
+            case 'h': move(-1,0,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
+            case 'j': move(0,+1,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
+            case 'k': move(0,-1,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
+            case 'l': move(+1,0,w,h, d20,&seed, &pos,&stats,&glyph,&controlled); break;
         }
         printf("\033[%dA",h);
     }
