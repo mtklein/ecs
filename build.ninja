@@ -33,17 +33,19 @@ rule showcov
 
 build out/bench.o: compile bench.c
     cc = $path clang
+build out/pma.o: compile pma.c
 build out/bench:   link out/bench.o
     cc = $path clang
 
 build out/aihack.o:       compile aihack.c
 build out/ecs.o:          compile ecs.c
 build out/ecs_test.o:     compile ecs_test.c
+build out/pma_test.o:     compile pma_test.c
 build out/systems.o:      compile systems.c
 build out/test.o:         compile test.c
 
 build out/aihack: link out/aihack.o out/ecs.o out/systems.o
-build out/test:   link out/test.o   out/ecs.o out/systems.o out/ecs_test.o
+build out/test:   link out/test.o   out/ecs.o out/pma.o out/systems.o out/ecs_test.o out/pma_test.o
 
 build out/test.ok | out/test.profraw: run out/test
 

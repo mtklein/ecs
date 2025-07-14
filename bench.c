@@ -1,4 +1,6 @@
+#define _POSIX_C_SOURCE 200809L
 #include "ecs.c"
+#include "pma.c"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -79,6 +81,71 @@ static double bench_lookup(int n) {
     return elapsed;
 }
 
+static double pma_dense(int n) {
+    __attribute__((cleanup(pma_reset)))
+    struct pma p = {.size = sizeof(int)};
+    double const start = now();
+    for (int i = 0; i < n; i++) {
+        pma_attach(i,&p,&i);
+    }
+    return now() - start;
+}
+
+static double pma_dense_rev(int n) {
+    __attribute__((cleanup(pma_reset)))
+    struct pma p = {.size = sizeof(int)};
+    double const start = now();
+    for (int i = n-1; i >= 0; i--) {
+        pma_attach(i,&p,&i);
+    }
+    return now() - start;
+}
+
+static double pma_sparse(int n) {
+    __attribute__((cleanup(pma_reset)))
+    struct pma p = {.size = sizeof(int)};
+    double const start = now();
+    for (int i = 0; i < n; i++) {
+        int id = i*10;
+        pma_attach(id,&p,&id);
+    }
+    return now() - start;
+}
+
+static double pma_iter(int n) {
+    __attribute__((cleanup(pma_reset)))
+    struct pma p = {.size = sizeof(int)};
+    for (int i = 0; i < n; i++) {
+        pma_attach(i,&p,&i);
+    }
+    double const start = now();
+    int const *val = p.data;
+    int sum = 0;
+    for (int i = 0; i < p.n; i++) {
+        sum += val[i];
+    }
+    volatile int sink = 0;
+    sink += sum;
+    return now() - start;
+}
+
+static double pma_lookup_bench(int n) {
+    __attribute__((cleanup(pma_reset)))
+    struct pma p = {.size = sizeof(int)};
+    for (int i = 0; i < n; i++) {
+        pma_attach(i,&p,&i);
+    }
+    double const start = now();
+    int sum = 0;
+    for (int i = 0; i < p.n; i++) {
+        int const *val = pma_lookup(p.id[i],&p);
+        sum += *val;
+    }
+    volatile int sink = 0;
+    sink += sum;
+    return now() - start;
+}
+
 static void bench(char const *pattern,
                   char const *name,
                   double (*fn)(int)) {
@@ -116,5 +183,10 @@ int main(int argc, char const* argv[]) {
     bench(pattern, "sparse",    bench_sparse);
     bench(pattern, "iter",      bench_iter);
     bench(pattern, "lookup",    bench_lookup);
+    bench(pattern, "pma_dense",     pma_dense);
+    bench(pattern, "pma_dense_rev", pma_dense_rev);
+    bench(pattern, "pma_sparse",    pma_sparse);
+    bench(pattern, "pma_iter",      pma_iter);
+    bench(pattern, "pma_lookup",    pma_lookup_bench);
     return 0;
 }
