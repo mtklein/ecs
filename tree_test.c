@@ -5,7 +5,7 @@ static int val(int x) { return x; }
 
 test(basic) {
     __attribute__((cleanup(tree_reset)))
-    struct tree t = {.size = sizeof(int), .root = ~0};
+    struct tree t = {.size = sizeof(int)};
 
     tree_attach(47,&t,&(int){val(47)});
     tree_attach(42,&t,&(int){val(42)});
@@ -33,7 +33,7 @@ test(basic) {
 
 test(overwrite) {
     __attribute__((cleanup(tree_reset)))
-    struct tree t = {.size=sizeof(int), .root = ~0};
+    struct tree t = {.size=sizeof(int)};
 
     tree_attach(42,&t,&(int){1});
     tree_attach(42,&t,&(int){2});

@@ -2,13 +2,13 @@
 
 #include <stddef.h>
 
+struct tree_node;
+
 struct tree {
-    size_t size;
-    void  *data;
-    int   *id;
-    int   *left,*right,*parent;
-    int    n,cap,root;
-    int    :32;
+    size_t           size;
+    int              cap;
+    int              n;
+    struct tree_node *root;
 };
 
 void tree_reset(struct tree*);

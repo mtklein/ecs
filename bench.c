@@ -82,7 +82,7 @@ static double bench_lookup(int n) {
 
 static double bench_tree_dense(int n) {
     __attribute__((cleanup(tree_reset)))
-    struct tree t = {.size = sizeof(int), .root = ~0};
+    struct tree t = {.size = sizeof(int)};
     double const start = now();
     for (int i = 0; i < n; ++i) {
         tree_attach(i,&t,&i);
@@ -92,14 +92,14 @@ static double bench_tree_dense(int n) {
 
 static double bench_tree_lookup(int n) {
     __attribute__((cleanup(tree_reset)))
-    struct tree t = {.size = sizeof(int), .root = ~0};
+    struct tree t = {.size = sizeof(int)};
     for (int i = 0; i < n; i++) {
         tree_attach(i,&t,&i);
     }
     double const start = now();
     int sum = 0;
-    for (int const *id = t.id; id < t.id + t.n; id++) {
-        int const *val = tree_lookup(*id,&t);
+    for (int i = 0; i < n; i++) {
+        int const *val = tree_lookup(i,&t);
         sum += *val;
     }
     volatile int sink = 0;
