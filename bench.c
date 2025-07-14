@@ -1,4 +1,5 @@
 #include "ecs.c"
+#include "tree.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -79,6 +80,33 @@ static double bench_lookup(int n) {
     return elapsed;
 }
 
+static double bench_tree_dense(int n) {
+    __attribute__((cleanup(tree_reset)))
+    struct tree t = {.size = sizeof(int)};
+    double const start = now();
+    for (int i = 0; i < n; ++i) {
+        tree_attach(i,&t,&i);
+    }
+    return now() - start;
+}
+
+static double bench_tree_lookup(int n) {
+    __attribute__((cleanup(tree_reset)))
+    struct tree t = {.size = sizeof(int)};
+    for (int i = 0; i < n; i++) {
+        tree_attach(i,&t,&i);
+    }
+    double const start = now();
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        int const *val = tree_lookup(i,&t);
+        sum += *val;
+    }
+    volatile int sink = 0;
+    sink += sum;
+    return now() - start;
+}
+
 static void bench(char const *pattern,
                   char const *name,
                   double (*fn)(int)) {
@@ -116,5 +144,7 @@ int main(int argc, char const* argv[]) {
     bench(pattern, "sparse",    bench_sparse);
     bench(pattern, "iter",      bench_iter);
     bench(pattern, "lookup",    bench_lookup);
+    bench(pattern, "tree_dense",  bench_tree_dense);
+    bench(pattern, "tree_lookup", bench_tree_lookup);
     return 0;
 }

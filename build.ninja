@@ -2,7 +2,7 @@ builddir = out
 
 path = env PATH=/opt/homebrew/opt/llvm/bin:$$PATH
 san  = address,integer,undefined
-cc   = clang -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
+cc   = clang -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping -D_GNU_SOURCE
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -32,18 +32,22 @@ rule showcov
     command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
 
 build out/bench.o: compile bench.c
-    cc = $path clang
-build out/bench:   link out/bench.o
+    cc = $path clang -D_GNU_SOURCE
+build out/bench:   link out/bench.o out/tree.o
     cc = $path clang
 
 build out/aihack.o:       compile aihack.c
 build out/ecs.o:          compile ecs.c
+build out/tree.o:         compile tree.c
+    cc = $path clang -D_GNU_SOURCE
+build out/tree_san.o:     compile tree.c
 build out/ecs_test.o:     compile ecs_test.c
+build out/tree_test.o:    compile tree_test.c
 build out/systems.o:      compile systems.c
 build out/test.o:         compile test.c
 
 build out/aihack: link out/aihack.o out/ecs.o out/systems.o
-build out/test:   link out/test.o   out/ecs.o out/systems.o out/ecs_test.o
+build out/test:   link out/test.o   out/ecs.o out/systems.o out/tree_san.o out/tree_test.o out/ecs_test.o
 
 build out/test.ok | out/test.profraw: run out/test
 
