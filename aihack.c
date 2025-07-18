@@ -10,31 +10,31 @@ static int       next_id = 1;
 struct pos {
     int x,y;
 };
-static struct component pos = {.size=sizeof(struct pos)};
+static struct component POS = {.size=sizeof(struct pos)};
 
 struct stats {
     int hp, ac, atk, dmg;
 };
-static struct component stats = {.size=sizeof(struct stats)};
+static struct component STATS = {.size=sizeof(struct stats)};
 
 struct glyph {
     char ch;
 };
-static struct component glyph = {.size=sizeof(struct glyph)};
+static struct component GLYPH = {.size=sizeof(struct glyph)};
 
 enum disposition {
     PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
 };
-static struct component disp = {.size=sizeof(enum disposition)};
+static struct component DISP = {.size=sizeof(enum disposition)};
 
-static struct component is_controlled;
+static struct component IS_CONTROLLED;
 
 static void draw(int *fb, int w, int h) {
     for (int i = 0; i < w*h; i++) {
         fb[i] = none;
     }
-    for (int const *id = pos.id; id < pos.id + pos.n; id++) {
-        struct pos const *p = lookup(*id, &pos);
+    for (int const *id = POS.id; id < POS.id + POS.n; id++) {
+        struct pos const *p = lookup(*id, &POS);
         fb[w*p->y + p->x] = *id;
     }
 
@@ -42,8 +42,8 @@ static void draw(int *fb, int w, int h) {
         for (int x = 0; x < w; x++) {
             int const id = fb[y*w + x];
 
-            struct glyph     const *g = lookup(id, &glyph);
-            enum disposition const *d = lookup(id, &disp);
+            struct glyph     const *g = lookup(id, &GLYPH);
+            enum disposition const *d = lookup(id, &DISP);
 
             static char const *color[] = {
                 [PARTY]    = "\033[32m",
@@ -60,8 +60,8 @@ static void draw(int *fb, int w, int h) {
 }
 
 static int entity_at(int x, int y) {
-    for (int const *id = pos.id; id < pos.id + pos.n; id++) {
-        struct pos const *p = lookup(*id, &pos);
+    for (int const *id = POS.id; id < POS.id + POS.n; id++) {
+        struct pos const *p = lookup(*id, &POS);
         if (p->x == x && p->y == y) {
             return *id;
         }
@@ -70,9 +70,9 @@ static int entity_at(int x, int y) {
 }
 
 static _Bool alive(void) {
-    for (int const *id = disp.id; id < disp.id + disp.n; id++) {
-        enum disposition const *d = lookup(*id, &disp);
-        struct stats     const *s = lookup(*id, &stats);
+    for (int const *id = DISP.id; id < DISP.id + DISP.n; id++) {
+        enum disposition const *d = lookup(*id, &DISP);
+        struct stats     const *s = lookup(*id, &STATS);
         if (*d == PARTY && s->hp > 0) {
             return 1;
         }
@@ -81,17 +81,17 @@ static _Bool alive(void) {
 }
 
 static void kill(int id) {
-    detach(id, &stats);
-    detach(id, &disp);
-    detach(id, &is_controlled);
+    detach(id, &STATS);
+    detach(id, &DISP);
+    detach(id, &IS_CONTROLLED);
 
-    attach(id, &glyph, &(char){'x'});
+    attach(id, &GLYPH, &(char){'x'});
 }
 
 static void combat(int attacker, int defender,
                    int (*d20)(void *ctx), void *ctx) {
-    struct stats *as = lookup(attacker, &stats),
-                 *ds = lookup(defender, &stats);
+    struct stats *as = lookup(attacker, &STATS),
+                 *ds = lookup(defender, &STATS);
     if (as && ds) {
         int const roll = d20(ctx);
         if (roll > 1) {
@@ -107,8 +107,8 @@ static void combat(int attacker, int defender,
 
 static void move(int dx, int dy, int w, int h,
                  int (*d20)(void *ctx), void *ctx) {
-    for (int const *id = is_controlled.id; id < is_controlled.id + is_controlled.n; id++) {
-        struct pos *p = lookup(*id, &pos);
+    for (int const *id = IS_CONTROLLED.id; id < IS_CONTROLLED.id + IS_CONTROLLED.n; id++) {
+        struct pos *p = lookup(*id, &POS);
 
         int const x = p->x + dx,
                   y = p->y + dy;
@@ -157,19 +157,19 @@ int main(int argc, char const* argv[]) {
 
     {
         int const player = next_id++;
-        attach(player, &pos  , &(struct pos){1,1});
-        attach(player, &stats, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
-        attach(player, &glyph, &(struct glyph){'@'});
-        attach(player, &disp , &(enum disposition){PARTY});
-        attach(player, &is_controlled, NULL);
+        attach(player, &POS  , &(struct pos){1,1});
+        attach(player, &STATS, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
+        attach(player, &GLYPH, &(struct glyph){'@'});
+        attach(player, &DISP , &(enum disposition){PARTY});
+        attach(player, &IS_CONTROLLED, NULL);
     }
 
     {
         int const imp = next_id++;
-        attach(imp, &pos  , &(struct pos){3,1});
-        attach(imp, &stats, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
-        attach(imp, &glyph, &(struct glyph){'i'});
-        attach(imp, &disp , &(enum disposition){HOSTILE});
+        attach(imp, &POS  , &(struct pos){3,1});
+        attach(imp, &STATS, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
+        attach(imp, &GLYPH, &(struct glyph){'i'});
+        attach(imp, &DISP , &(enum disposition){HOSTILE});
     }
 
     int const w=10, h=5;
