@@ -44,7 +44,16 @@ def init_db(conn):
 def attach(conn, table, id, values):
     cols = ",".join(values.keys())
     params = ",".join("?" for _ in values)
-    conn.execute(f"INSERT OR REPLACE INTO {table}(id,{cols}) VALUES(?,{params})", [id, *values.values()])
+    if cols:
+        conn.execute(
+            f"INSERT OR REPLACE INTO {table}(id,{cols}) VALUES(?,{params})",
+            [id, *values.values()],
+        )
+    else:
+        conn.execute(
+            f"INSERT OR REPLACE INTO {table}(id) VALUES(?)",
+            (id,),
+        )
 
 
 def detach(conn, table, id):
