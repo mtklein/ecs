@@ -168,6 +168,7 @@ int main(int argc, char const* argv[]) {
     }
 
     printf("\033[?1049h");
+    printf("\033[?25l");
     while (alive()) {
         printf("\033[H");
         draw(fb,w,h);
