@@ -167,8 +167,7 @@ int main(int argc, char const* argv[]) {
         tcsetattr(STDIN_FILENO, TCSANOW, &termios);
     }
 
-    printf("\033[?47h");
-    printf("\033[2J");
+    printf("\033[?1049h");
     while (alive()) {
         printf("\033[H");
         draw(fb,w,h);
@@ -183,7 +182,7 @@ int main(int argc, char const* argv[]) {
         }
     }
 exit:
-    printf("\033[?47l");
+    printf("\033[?1049l");
     return 0;
 }
 
