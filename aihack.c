@@ -126,21 +126,6 @@ static void move(int dx, int dy, int w, int h,
     }
 }
 
-
-static int getch(void) {
-    struct termios prev;
-    tcgetattr(STDIN_FILENO, &prev);
-
-    struct termios quiet = prev;
-    quiet.c_lflag &= (tcflag_t)~(ICANON|ECHO);
-    tcsetattr(STDIN_FILENO,TCSANOW, &quiet);
-
-    int const c = getchar();
-    tcsetattr(STDIN_FILENO,TCSANOW, &prev);
-
-    return c;
-}
-
 static unsigned rng(unsigned seed) {
     __builtin_mul_overflow(seed, 1103515245u, &seed);
     __builtin_add_overflow(seed,      12345u, &seed);
@@ -175,19 +160,30 @@ int main(int argc, char const* argv[]) {
     int const w=10, h=5;
     int *fb = calloc((size_t)(w*h), sizeof *fb);
 
+    {
+        struct termios termios;
+        tcgetattr(STDIN_FILENO, &termios);
+        termios.c_lflag &= ~(tcflag_t)(ICANON|ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &termios);
+    }
+
+    printf("\033[?47h");
+    printf("\033[2J");
     while (alive()) {
+        printf("\033[H");
         draw(fb,w,h);
 
-        switch (getch()) {
-            case 'q': return 0;
+        switch (getchar()) {
+            case 'q': goto exit;
 
             case 'h': move(-1,0,w,h, d20,&seed); break;
             case 'j': move(0,+1,w,h, d20,&seed); break;
             case 'k': move(0,-1,w,h, d20,&seed); break;
             case 'l': move(+1,0,w,h, d20,&seed); break;
         }
-        printf("\033[%dA",h);
     }
+exit:
+    printf("\033[?47l");
     return 0;
 }
 
