@@ -33,19 +33,22 @@ static void drop_id(int id) {
 #define set(id, comp) comp[has[id].comp = 1, id]
 #define get(id, comp) (has[id].comp ? comp+id : NULL)
 
-static void draw(int *fb, int w, int h) {
-    for (int i = 0; i < w*h; i++) {
-        fb[i] = nil;
-    }
+static int entity_at(int x, int y) {
     for (int id = 0; id < ids; id++) {
         struct pos const *p = get(id, pos);
         if (p) {
-            fb[w*p->y + p->x] = id;
+            if (p->x == x && p->y == y) {
+                return id;
+            }
         }
     }
+    return nil;
+}
+
+static void draw(int w, int h) {
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            int const id = fb[y*w + x];
+            int const id = entity_at(x,y);
 
             static char const *color[] = {
                 [LEADER]   = "\033[32m",
@@ -63,18 +66,6 @@ static void draw(int *fb, int w, int h) {
         }
         putchar('\n');
     }
-}
-
-static int entity_at(int x, int y) {
-    for (int id = 0; id < ids; id++) {
-        struct pos const *p = get(id, pos);
-        if (p) {
-            if (p->x == x && p->y == y) {
-                return id;
-            }
-        }
-    }
-    return nil;
 }
 
 static _Bool alive(void) {
@@ -164,7 +155,6 @@ int main(int argc, char const* argv[]) {
     }
 
     int const w=10, h=5;
-    int *fb = calloc((size_t)(w*h), sizeof *fb);
 
     {
         struct termios termios;
@@ -177,7 +167,7 @@ int main(int argc, char const* argv[]) {
     printf("\033[?25l");
     while (alive()) {
         printf("\033[H");
-        draw(fb,w,h);
+        draw(w,h);
 
         switch (getchar()) {
             case 'q': goto exit;
