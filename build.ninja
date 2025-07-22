@@ -1,8 +1,7 @@
 builddir = out
 
-path = env PATH=/opt/homebrew/opt/llvm/bin:$$PATH
 san  = address,integer,undefined
-cc   = clang -fsanitize=$san -fno-sanitize-recover=$san -fprofile-instr-generate -fcoverage-mapping
+cc   = clang -fsanitize=$san -fno-sanitize-recover=$san
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -10,40 +9,12 @@ warn = -Weverything $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $path $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
+    command = $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
 rule link
-    command = $path $cc -lm $in -o $out
+    command = $cc -lm $in -o $out
 
-rule run
-    command = env LLVM_PROFILE_FILE=$in.profraw ./$in > $out
-
-rule mergecov
-    command = $path llvm-profdata merge -sparse $in -o $out
-
-rule reportcov
-    command = $path llvm-cov report -ignore-filename-regex=test -use-color -instr-profile=$in > $out
-
-rule showcov
-    command = $path llvm-cov show -ignore-filename-regex=test -format html -instr-profile=$in > $out
-
-build out/bench.o: compile bench.c
-    cc = $path clang
-build out/bench:   link out/bench.o
-    cc = $path clang
-
-build out/aihack.o:       compile aihack.c
-build out/ecs.o:          compile ecs.c
-build out/ecs_test.o:     compile ecs_test.c
-build out/test.o:         compile test.c
-
-build out/aihack: link out/aihack.o out/ecs.o
-build out/test:   link out/test.o   out/ecs.o out/ecs_test.o
-
-build out/test.ok | out/test.profraw: run out/test
-
-build out/coverage.profdata: mergecov out/test.profraw
-build out/coverage.html:      showcov out/coverage.profdata out/test
-build out/coverage.report:  reportcov out/coverage.profdata out/test
+build out/aihack.o: compile  aihack.c
+build out/aihack:   link out/aihack.o

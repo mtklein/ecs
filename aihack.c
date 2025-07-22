@@ -1,49 +1,51 @@
-#include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
-static int const none    = 0;
-static int       next_id = 1;
+#define MAX_IDS 1024
+static int const none = 0;
+static int       ids  = 1;
 
-struct pos {
-    int x,y;
-};
-static struct component POS = {.size=sizeof(struct pos)};
+static struct pos       { int x,y; }                                    pos  [MAX_IDS];
+static struct stats     { int hp, ac, atk, dmg; }                       stats[MAX_IDS];
+static struct glyph     { char ch; }                                    glyph[MAX_IDS];
+static enum disposition { PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } disp [MAX_IDS];
 
-struct stats {
-    int hp, ac, atk, dmg;
-};
-static struct component STATS = {.size=sizeof(struct stats)};
+static struct has {
+    _Bool pos   : 1,
+          stats : 1,
+          glyph : 1,
+          disp  : 1;
+    char        : 4;
+} has[MAX_IDS];
 
-struct glyph {
-    char ch;
-};
-static struct component GLYPH = {.size=sizeof(struct glyph)};
+static struct tag {
+    _Bool controlled : 1;
+    char             : 7;
+} tag[MAX_IDS];
 
-enum disposition {
-    PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
-};
-static struct component DISP = {.size=sizeof(enum disposition)};
+#define set(id, comp) comp[has[id].comp = 1, id]
+#define get(id, comp) (has[id].comp ? comp+id : NULL)
 
-static struct component IS_CONTROLLED;
+static void drop(int id) {
+    has[id] = (struct has){0};
+    tag[id] = (struct tag){0};
+}
 
 static void draw(int *fb, int w, int h) {
     for (int i = 0; i < w*h; i++) {
         fb[i] = none;
     }
-    for (int const *id = POS.id; id < POS.id + POS.n; id++) {
-        struct pos const *p = lookup(*id, &POS);
-        fb[w*p->y + p->x] = *id;
+    for (int id = 0; id < ids; id++) {
+        struct pos const *p = get(id, pos);
+        if (p) {
+            fb[w*p->y + p->x] = id;
+        }
     }
-
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             int const id = fb[y*w + x];
-
-            struct glyph     const *g = lookup(id, &GLYPH);
-            enum disposition const *d = lookup(id, &DISP);
 
             static char const *color[] = {
                 [PARTY]    = "\033[32m",
@@ -52,6 +54,9 @@ static void draw(int *fb, int w, int h) {
                 [HOSTILE]  = "\033[31m",
                 [MADDENED] = "\033[35m",
             };
+
+            enum disposition const *d = get(id, disp);
+            struct glyph const     *g = get(id, glyph);
             printf("%s%c", d ? color[*d] : "\033[0m"
                          , g ? g->ch     : '.');
         }
@@ -60,68 +65,68 @@ static void draw(int *fb, int w, int h) {
 }
 
 static int entity_at(int x, int y) {
-    for (int const *id = POS.id; id < POS.id + POS.n; id++) {
-        struct pos const *p = lookup(*id, &POS);
-        if (p->x == x && p->y == y) {
-            return *id;
+    for (int id = 0; id < ids; id++) {
+        struct pos const *p = get(id, pos);
+        if (p) {
+            if (p->x == x && p->y == y) {
+                return id;
+            }
         }
     }
     return none;
 }
 
 static _Bool alive(void) {
-    for (int const *id = DISP.id; id < DISP.id + DISP.n; id++) {
-        enum disposition const *d = lookup(*id, &DISP);
-        struct stats     const *s = lookup(*id, &STATS);
-        if (*d == PARTY && s->hp > 0) {
-            return 1;
+    for (int id = 0; id < ids; id++) {
+        enum disposition const *d = get(id, disp);
+        struct stats     const *s = get(id, stats);
+        if (d && s) {
+            if (disp[id] == PARTY && stats[id].hp > 0) {
+                return 1;
+            }
         }
     }
     return 0;
 }
 
-static void kill(int id) {
-    detach(id, &STATS);
-    detach(id, &DISP);
-    detach(id, &IS_CONTROLLED);
-
-    attach(id, &GLYPH, &(char){'x'});
-}
-
-static void combat(int attacker, int defender,
-                   int (*d20)(void *ctx), void *ctx) {
-    struct stats *as = lookup(attacker, &STATS),
-                 *ds = lookup(defender, &STATS);
+static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
+    struct stats const *as = get(attacker, stats);
+    struct stats       *ds = get(defender, stats);
     if (as && ds) {
         int const roll = d20(ctx);
         if (roll > 1) {
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    kill(defender);
+                    struct pos const p = *get(defender, pos);
+                    drop(defender);
+
+                    int const id = ids++;
+                    set(id,pos)   = p;
+                    set(id,glyph) = (struct glyph){'x'};
                 }
             }
         }
     }
 }
 
-static void move(int dx, int dy, int w, int h,
-                 int (*d20)(void *ctx), void *ctx) {
-    for (int const *id = IS_CONTROLLED.id; id < IS_CONTROLLED.id + IS_CONTROLLED.n; id++) {
-        struct pos *p = lookup(*id, &POS);
+static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
+    for (int id = 0; id < ids; id++) {
+        struct pos *p = get(id, pos);
+        if (p && tag[id].controlled) {
+            int const x = p->x + dx,
+                      y = p->y + dy;
+            if (x<0 || y<0 || x>=w || y>=h) {
+                continue;
+            }
 
-        int const x = p->x + dx,
-                  y = p->y + dy;
-        if (x<0 || y<0 || x>=w || y>=h) {
-            continue;
-        }
-
-        int const found = entity_at(x,y);
-        if (found) {
-            combat(*id,found, d20,ctx);
-        } else {
-            p->x = x;
-            p->y = y;
+            int const found = entity_at(x,y);
+            if (found) {
+                combat(id,found, d20,ctx);
+            } else {
+                p->x = x;
+                p->y = y;
+            }
         }
     }
 }
@@ -141,20 +146,20 @@ int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
     {
-        int const player = next_id++;
-        attach(player, &POS  , &(struct pos){1,1});
-        attach(player, &STATS, &(struct stats){.hp=10, .ac=10, .atk=2, .dmg=4});
-        attach(player, &GLYPH, &(struct glyph){'@'});
-        attach(player, &DISP , &(enum disposition){PARTY});
-        attach(player, &IS_CONTROLLED, NULL);
+        int const id = ids++;
+        set(id, pos)   = (struct pos  ){1,1};
+        set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
+        set(id, glyph) = (struct glyph){'@'};
+        set(id, disp ) = PARTY;
+        tag[id].controlled = 1;
     }
 
     {
-        int const imp = next_id++;
-        attach(imp, &POS  , &(struct pos){3,1});
-        attach(imp, &STATS, &(struct stats){.hp=4, .ac=12, .atk=3, .dmg=2});
-        attach(imp, &GLYPH, &(struct glyph){'i'});
-        attach(imp, &DISP , &(enum disposition){HOSTILE});
+        int const id = ids++;
+        set(id, pos  ) = (struct pos  ){3,1};
+        set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
+        set(id, glyph) = (struct glyph){'i'};
+        set(id, disp ) = HOSTILE;
     }
 
     int const w=10, h=5;
@@ -185,9 +190,4 @@ int main(int argc, char const* argv[]) {
 exit:
     printf("\033[?1049l");
     return 0;
-}
-
-__attribute__((constructor))
-static void premain(void) {
-    setenv("LLVM_PROFILE_FILE", "%t/tmp.profraw", 0);
 }
