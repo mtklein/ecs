@@ -6,6 +6,8 @@
 #define MAX_IDS 1024
 static int const none = 0;
 static int       ids  = 1;
+static int       free_id[MAX_IDS];
+static int       free_ids = 0;
 
 static struct pos       { int x,y; }                                    pos  [MAX_IDS];
 static struct stats     { int hp, ac, atk, dmg; }                       stats[MAX_IDS];
@@ -26,11 +28,15 @@ static struct tag {
 } tag[MAX_IDS];
 
 static int alloc_id(void) {
+    if (free_ids) {
+        return free_id[--free_ids];
+    }
     return ids++;
 }
 static void drop_id(int id) {
     has[id] = (struct has){0};
     tag[id] = (struct tag){0};
+    free_id[free_ids++] = id;
 }
 #define set(id, comp) comp[has[id].comp = 1, id]
 #define get(id, comp) (has[id].comp ? comp+id : NULL)
