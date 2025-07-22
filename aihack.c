@@ -64,7 +64,7 @@ static void draw(int w, int h) {
             printf("%s%c", d ? color[*d] : "\033[0m"
                          , g ? g->ch     : '.');
         }
-        putchar('\n');
+        printf("\n");
     }
 }
 
