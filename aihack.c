@@ -32,14 +32,13 @@ static void drop_id(int id) {
 }
 #define set(id, comp) comp[has[id].comp = 1, id]
 #define get(id, comp) (has[id].comp ? comp+id : NULL)
+#define scan(id) for (int id = 0; id < ids; id++)
 
 static int entity_at(int x, int y) {
-    for (int id = 0; id < ids; id++) {
+    scan(id) {
         struct pos const *p = get(id, pos);
-        if (p) {
-            if (p->x == x && p->y == y) {
-                return id;
-            }
+        if (p && p->x == x && p->y == y) {
+            return id;
         }
     }
     return nil;
@@ -69,7 +68,7 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    for (int id = 0; id < ids; id++) {
+    scan(id) {
         enum disposition const *d = get(id, disp);
         struct stats     const *s = get(id, stats);
         if (d && s) {
@@ -103,7 +102,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    for (int id = 0; id < ids; id++) {
+    scan(id) {
         enum disposition const *d = get(id, disp);
         struct pos             *p = get(id, pos);
         if (d && p && *d == LEADER) {
