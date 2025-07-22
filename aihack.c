@@ -82,7 +82,7 @@ static _Bool alive(void) {
         enum disposition const *d = get(id, disp);
         struct stats     const *s = get(id, stats);
         if (d && s) {
-            if (disp[id] == PARTY && stats[id].hp > 0) {
+            if (disp[id] == LEADER && stats[id].hp > 0) {
                 return 1;
             }
         }
