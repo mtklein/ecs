@@ -9,10 +9,10 @@ static int       ids = 1;
 static int  free_ids = 0;
 static int  free_id[MAX_IDS];
 
-static struct pos       { int x,y; }                                    pos  [MAX_IDS];
-static struct stats     { int hp, ac, atk, dmg; }                       stats[MAX_IDS];
-static struct glyph     { char ch; }                                    glyph[MAX_IDS];
-static enum disposition { PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } disp [MAX_IDS];
+static struct pos       { int x,y; }                                            pos  [MAX_IDS];
+static struct stats     { int hp, ac, atk, dmg; }                               stats[MAX_IDS];
+static struct glyph     { char ch; }                                            glyph[MAX_IDS];
+static enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } disp [MAX_IDS];
 
 static struct has {
     _Bool pos   : 1,
@@ -22,18 +22,12 @@ static struct has {
     char        : 4;
 } has[MAX_IDS];
 
-static struct tag {
-    _Bool controlled : 1;
-    char             : 7;
-} tag[MAX_IDS];
-
 static int alloc_id(void) {
     return free_ids ? free_id[--free_ids]
                     : ids++;
 }
 static void drop_id(int id) {
     has[id] = (struct has){0};
-    tag[id] = (struct tag){0};
     free_id[free_ids++] = id;
 }
 #define set(id, comp) comp[has[id].comp = 1, id]
@@ -54,6 +48,7 @@ static void draw(int *fb, int w, int h) {
             int const id = fb[y*w + x];
 
             static char const *color[] = {
+                [LEADER]   = "\033[32m",
                 [PARTY]    = "\033[32m",
                 [FRIENDLY] = "\033[34m",
                 [NEUTRAL]  = "\033[33m",
@@ -118,8 +113,9 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
     for (int id = 0; id < ids; id++) {
-        struct pos *p = get(id, pos);
-        if (p && tag[id].controlled) {
+        enum disposition const *d = get(id, disp);
+        struct pos             *p = get(id, pos);
+        if (d && p && *d == LEADER) {
             int const x = p->x + dx,
                       y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
@@ -156,8 +152,7 @@ int main(int argc, char const* argv[]) {
         set(id, pos)   = (struct pos  ){1,1};
         set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
         set(id, glyph) = (struct glyph){'@'};
-        set(id, disp ) = PARTY;
-        tag[id].controlled = 1;
+        set(id, disp ) = LEADER;
     }
 
     {
