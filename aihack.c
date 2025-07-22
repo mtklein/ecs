@@ -25,13 +25,15 @@ static struct tag {
     char             : 7;
 } tag[MAX_IDS];
 
-#define set(id, comp) comp[has[id].comp = 1, id]
-#define get(id, comp) (has[id].comp ? comp+id : NULL)
-
-static void drop(int id) {
+static int alloc_id(void) {
+    return ids++;
+}
+static void drop_id(int id) {
     has[id] = (struct has){0};
     tag[id] = (struct tag){0};
 }
+#define set(id, comp) comp[has[id].comp = 1, id]
+#define get(id, comp) (has[id].comp ? comp+id : NULL)
 
 static void draw(int *fb, int w, int h) {
     for (int i = 0; i < w*h; i++) {
@@ -99,9 +101,9 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
                     struct pos const p = *get(defender, pos);
-                    drop(defender);
+                    drop_id(defender);
 
-                    int const id = ids++;
+                    int const id = alloc_id();
                     set(id,pos)   = p;
                     set(id,glyph) = (struct glyph){'x'};
                 }
@@ -146,7 +148,7 @@ int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
     {
-        int const id = ids++;
+        int const id = alloc_id();
         set(id, pos)   = (struct pos  ){1,1};
         set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
         set(id, glyph) = (struct glyph){'@'};
@@ -155,7 +157,7 @@ int main(int argc, char const* argv[]) {
     }
 
     {
-        int const id = ids++;
+        int const id = alloc_id();
         set(id, pos  ) = (struct pos  ){3,1};
         set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
         set(id, glyph) = (struct glyph){'i'};
