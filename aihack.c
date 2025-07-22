@@ -4,10 +4,10 @@
 #include <unistd.h>
 
 #define MAX_IDS 1024
-static int const none = 0;
-static int       ids  = 1;
-static int       free_id[MAX_IDS];
-static int       free_ids = 0;
+static int const nil = 0;
+static int       ids = 1;
+static int  free_ids = 0;
+static int  free_id[MAX_IDS];
 
 static struct pos       { int x,y; }                                    pos  [MAX_IDS];
 static struct stats     { int hp, ac, atk, dmg; }                       stats[MAX_IDS];
@@ -28,10 +28,8 @@ static struct tag {
 } tag[MAX_IDS];
 
 static int alloc_id(void) {
-    if (free_ids) {
-        return free_id[--free_ids];
-    }
-    return ids++;
+    return free_ids ? free_id[--free_ids]
+                    : ids++;
 }
 static void drop_id(int id) {
     has[id] = (struct has){0};
@@ -43,7 +41,7 @@ static void drop_id(int id) {
 
 static void draw(int *fb, int w, int h) {
     for (int i = 0; i < w*h; i++) {
-        fb[i] = none;
+        fb[i] = nil;
     }
     for (int id = 0; id < ids; id++) {
         struct pos const *p = get(id, pos);
@@ -81,7 +79,7 @@ static int entity_at(int x, int y) {
             }
         }
     }
-    return none;
+    return nil;
 }
 
 static _Bool alive(void) {
