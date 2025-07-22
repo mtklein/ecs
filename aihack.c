@@ -58,8 +58,17 @@ static void draw(int *fb, int w, int h) {
 
             enum disposition const *d = get(id, disp);
             struct glyph const     *g = get(id, glyph);
-            printf("%s%c", d ? color[*d] : "\033[0m"
-                         , g ? g->ch     : '.');
+
+            char ch;
+            if (g) {
+                ch = g->ch;
+            } else if (id == nil) {
+                ch = ' ';
+            } else {
+                ch = '.';
+            }
+
+            printf("%s%c", d ? color[*d] : "\033[0m", ch);
         }
         putchar('\n');
     }
@@ -124,11 +133,13 @@ static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx)
 
             int const found = entity_at(x,y);
             if (found) {
-                combat(id,found, d20,ctx);
-            } else {
-                p->x = x;
-                p->y = y;
+                if (get(found, stats)) {
+                    combat(id,found, d20,ctx);
+                    continue;
+                }
             }
+            p->x = x;
+            p->y = y;
         }
     }
 }
@@ -147,6 +158,24 @@ static int d20(void *ctx) {
 int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
+    int const w=10, h=5;
+
+    for (int y = 0; y < h; y++) {
+        int start = 0, end = w;
+        switch (y) {
+            case 0: start = 2; end = 8; break;
+            case 1: start = 0; end = 10; break;
+            case 2: start = 1; end = 9; break;
+            case 3: start = 0; end = 10; break;
+            case 4: start = 2; end = 8; break;
+        }
+        for (int x = start; x < end; x++) {
+            int const id = alloc_id();
+            set(id, pos  ) = (struct pos  ){x,y};
+            set(id, glyph) = (struct glyph){'.'};
+        }
+    }
+
     {
         int const id = alloc_id();
         set(id, pos)   = (struct pos  ){1,1};
@@ -163,7 +192,6 @@ int main(int argc, char const* argv[]) {
         set(id, disp ) = HOSTILE;
     }
 
-    int const w=10, h=5;
     int *fb = calloc((size_t)(w*h), sizeof *fb);
 
     {
@@ -190,5 +218,6 @@ int main(int argc, char const* argv[]) {
     }
 exit:
     printf("\033[?1049l");
+    free(fb);
     return 0;
 }
