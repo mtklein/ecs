@@ -61,6 +61,12 @@ static void attach_(int *ix, array *comp, void const *val) {
     memcpy(ptr(comp, *ix), val, comp->size);
 }
 
+#define detach(id, comp) \
+    detach_(&((struct entity*)ptr(&entity,id))->comp)
+static void detach_(int *ix) {
+    *ix = -1;
+}
+
 #define lookup(id, comp) ((struct comp*)lookup_(((struct entity*)ptr(&entity,id))->comp, &comp))
 static void* lookup_(int ix, array const *comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
@@ -122,16 +128,17 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    struct pos const *p = lookup(defender, pos),
-                                  saved = *p;
-                    drop_id(defender);
-
-                    int const id = alloc_id();
-                    attach(id, pos  , .id=id, .x=saved.x, .y=saved.y);
-                    attach(id, glyph, 'x');
+                    struct glyph *g = lookup(defender, glyph);
+                    if (g) {
+                        g->ch = 'x';
+                    }
+                    detach(defender, stats);
+                    detach(defender, disp);
                 }
             }
         }
+    } else if (as && !ds) {
+        drop_id(defender);
     }
 }
 
