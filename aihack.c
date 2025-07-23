@@ -1,4 +1,5 @@
 #include "array.h"
+#include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,41 +37,11 @@ static array entity = {.size = sizeof(struct entity)};
 
 static array freelist = {.size = sizeof(int)};
 
-static int alloc_id(void) {
-    for (int const *id = pop(&freelist); id;) {
-        return *id;
-    }
-    int const id = push(&entity);
-    memset(ptr(&entity, id), ~0, entity.size);
-    return id;
-}
-
-static void drop_id(int id) {
-    memset(ptr(&entity, id), ~0, entity.size);
-
-    int *free_id = ptr(&freelist, push(&freelist));
-    *free_id = id;
-}
-
 #define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
 
-#define attach(id, comp, ...) attach_(&ix(id,comp), &comp, &(struct comp){__VA_ARGS__} )
-static void attach_(int *ix, array *comp, void const *val) {
-    if (*ix < 0) {
-        *ix = push(comp);
-    }
-    memcpy(ptr(comp, *ix), val, comp->size);
-}
-
-#define detach(id, comp) detach_(&ix(id,comp))
-static void detach_(int *ix) {
-    *ix = -1;
-}
-
-#define lookup(id, comp) ((struct comp*)lookup_(ix(id,comp), &comp))
-static void* lookup_(int ix, array const *comp) {
-    return ix < 0 ? NULL : ptr(comp, ix);
-}
+#define attach(id, comp, ...) component_set(&comp, &ix(id,comp), &(struct comp){__VA_ARGS__})
+#define detach(id, comp)      component_del(&comp, &ix(id,comp))
+#define lookup(id, comp)      (struct comp*)component_get(&comp, ix(id,comp))
 
 
 static int entity_at(int x, int y) {
@@ -135,7 +106,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
             }
         }
     } else if (as && !ds) {
-        drop_id(defender);
+        drop_id(&entity, &freelist, defender);
     }
 }
 
@@ -175,10 +146,10 @@ static int d20(void *ctx) {
 int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
-    (void)alloc_id();
+    (void)alloc_id(&entity, &freelist);
 
     {
-        int const id = alloc_id();
+        int const id = alloc_id(&entity, &freelist);
         attach(id, pos  , .id=id, .x=1, .y=1);
         attach(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
         attach(id, glyph, '@');
@@ -186,7 +157,7 @@ int main(int argc, char const* argv[]) {
     }
 
     {
-        int const id = alloc_id();
+        int const id = alloc_id(&entity, &freelist);
         attach(id, pos  , .id=id, .x=3, .y=1);
         attach(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
         attach(id, glyph, 'i');
