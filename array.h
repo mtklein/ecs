@@ -9,5 +9,6 @@ typedef struct {
 } array;
 
 int  grow(array*);
-void* ptr(array const*, int ix);
 void* pop(array*);
+
+void* ptr(array, int ix);

@@ -9,10 +9,10 @@ int grow(array *arr) {
     return arr->n++;
 }
 
-void* ptr(array const *arr, int ix) {
-    return (char*)arr->data + (size_t)ix * arr->size;
+void* pop(array *arr) {
+    return arr->n ? ptr(*arr, --arr->n) : NULL;
 }
 
-void* pop(array *arr) {
-    return arr->n ? ptr(arr, --arr->n) : NULL;
+void* ptr(array arr, int ix) {
+    return (char*)arr.data + (size_t)ix * arr.size;
 }
