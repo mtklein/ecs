@@ -38,16 +38,17 @@ static array freelist = {.size = sizeof(int)};
 #define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
 
 #define attach(id, comp, ...) component_set(&comp, &ix(id,comp), id, &(struct comp){__VA_ARGS__})
-#define detach(id, comp)                                                      \
-    do {                                                                     \
-        int *back = &ix(id,comp);                                            \
-        int const last = comp.n - 1;                                         \
-        if (ix(id,comp) != last) {                                           \
-            int back_id = comp.id[last];                                     \
-            back = &ix(back_id, comp);                                       \
-        }                                                                    \
-        component_del(&comp, &ix(id,comp), back);                            \
-    } while (0)
+#define detach(entity_id, comp)                                              \
+    detatch_(&comp, &ix(entity_id,comp), &ix(comp.id[comp.n-1], comp))
+
+static void detatch_(component *comp, int *ix, int *back_ix) {
+    int *back = ix;
+    int const last = comp->n - 1;
+    if (*ix != last) {
+        back = back_ix;
+    }
+    component_del(comp, ix, back);
+}
 #define lookup(id, comp)      (struct comp*)component_get(&comp, ix(id,comp))
 
 
