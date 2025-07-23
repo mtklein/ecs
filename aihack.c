@@ -1,38 +1,71 @@
+#include "array.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
-#define MAX_IDS 1024
-static int const nil = 0;
-static int       ids = 1;
-static int  free_ids = 0;
-static int  free_id[MAX_IDS];
+struct pos {
+    int x,y;
+};
+static array pos = {.size = sizeof(struct pos)};
 
-static struct pos       { int x,y; }                                            pos  [MAX_IDS];
-static struct stats     { int hp, ac, atk, dmg; }                               stats[MAX_IDS];
-static struct glyph     { char ch; }                                            glyph[MAX_IDS];
-static enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } disp [MAX_IDS];
+struct stats {
+    int hp, ac, atk, dmg;
+};
+static array stats = {.size = sizeof(struct stats)};
 
-static struct has {
-    _Bool pos   : 1,
-          stats : 1,
-          glyph : 1,
-          disp  : 1;
-    char        : 4;
-} has[MAX_IDS];
+struct glyph {
+    char ch;
+};
+static array glyph = {.size = sizeof(struct glyph)};
+
+struct disp {
+    enum { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } kind;
+};
+static array disp = {.size = sizeof(struct disp)};
+
+struct entity {
+    int pos,
+        stats,
+        glyph,
+        disp;
+};
+static array entity = {.size = sizeof(struct entity)};
+#define scan(id) for (int id = 0; id < entity.n; id++)
+
+static array freelist = {.size = sizeof(int)};
 
 static int alloc_id(void) {
-    return free_ids ? free_id[--free_ids]
-                    : ids++;
+    for (int const *id = pop(&freelist); id;) {
+        return *id;
+    }
+    int const id = grow(&entity);
+    memset(ptr(&entity, id), ~0, entity.size);
+    return id;
 }
+
 static void drop_id(int id) {
-    has[id] = (struct has){0};
-    free_id[free_ids++] = id;
+    memset(ptr(&entity, id), ~0, entity.size);
+
+    int *free_id = ptr(&freelist, grow(&freelist));
+    *free_id = id;
 }
-#define set(id, comp) comp[has[id].comp = 1, id]
-#define get(id, comp) (has[id].comp ? comp+id : NULL)
-#define scan(id) for (int id = 0; id < ids; id++)
+
+#define set(id, comp, ...) \
+    set_(&comp, &((struct entity*)ptr(&entity,id))->comp, &(struct comp){__VA_ARGS__} )
+static void set_(array *comp, int *ix, void const *val) {
+    if (*ix < 0) {
+        *ix = grow(comp);
+    }
+    memcpy(ptr(comp, *ix), val, comp->size);
+}
+
+#define get(id, comp) get_(&comp, ((struct entity*)ptr(&entity,id))->comp)
+static void* get_(array const *comp, int ix) {
+    return ix < 0 ? NULL : ptr(comp, ix);
+}
+
 
 static int entity_at(int x, int y) {
     scan(id) {
@@ -41,7 +74,7 @@ static int entity_at(int x, int y) {
             return id;
         }
     }
-    return nil;
+    return 0;
 }
 
 static void draw(int w, int h) {
@@ -58,10 +91,10 @@ static void draw(int w, int h) {
                 [MADDENED] = "\033[35m",
             };
 
-            enum disposition const *d = get(id, disp);
-            struct glyph const     *g = get(id, glyph);
-            printf("%s%c", d ? color[*d] : "\033[0m"
-                         , g ? g->ch     : '.');
+            struct disp  const *d = get(id, disp);
+            struct glyph const *g = get(id, glyph);
+            printf("%s%c", d ? color[d->kind] : "\033[0m"
+                         , g ? g->ch          : '.');
         }
         printf("\n");
     }
@@ -69,10 +102,10 @@ static void draw(int w, int h) {
 
 static _Bool alive(void) {
     scan(id) {
-        enum disposition const *d = get(id, disp);
-        struct stats     const *s = get(id, stats);
+        struct disp  const *d = get(id, disp);
+        struct stats const *s = get(id, stats);
         if (d && s) {
-            if (disp[id] == LEADER && stats[id].hp > 0) {
+            if (d->kind == LEADER && s->hp > 0) {
                 return 1;
             }
         }
@@ -89,12 +122,13 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    struct pos const p = *get(defender, pos);
+                    struct pos const *p = get(defender, pos),
+                                  saved = *p;
                     drop_id(defender);
 
                     int const id = alloc_id();
-                    set(id,pos)   = p;
-                    set(id,glyph) = (struct glyph){'x'};
+                    set(id, pos  , saved.x, saved.y);
+                    set(id, glyph, 'x');
                 }
             }
         }
@@ -103,9 +137,9 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
     scan(id) {
-        enum disposition const *d = get(id, disp);
-        struct pos             *p = get(id, pos);
-        if (d && p && *d == LEADER) {
+        struct disp const *d = get(id, disp);
+        struct pos        *p = get(id, pos);
+        if (d && p && d->kind == LEADER) {
             int const x = p->x + dx,
                       y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
@@ -137,20 +171,22 @@ static int d20(void *ctx) {
 int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
+    (void)alloc_id();
+
     {
         int const id = alloc_id();
-        set(id, pos)   = (struct pos  ){1,1};
-        set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
-        set(id, glyph) = (struct glyph){'@'};
-        set(id, disp ) = LEADER;
+        set(id, pos  , 1,1);
+        set(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
+        set(id, glyph, '@');
+        set(id, disp , LEADER);
     }
 
     {
         int const id = alloc_id();
-        set(id, pos  ) = (struct pos  ){3,1};
-        set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
-        set(id, glyph) = (struct glyph){'i'};
-        set(id, disp ) = HOSTILE;
+        set(id, pos  , 3,1);
+        set(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
+        set(id, glyph, 'i');
+        set(id, disp , HOSTILE);
     }
 
     int const w=10, h=5;

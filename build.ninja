@@ -17,4 +17,5 @@ rule link
     command = $cc -lm $in -o $out
 
 build out/aihack.o: compile  aihack.c
-build out/aihack:   link out/aihack.o
+build out/array.o:  compile  array.c
+build out/aihack:   link out/aihack.o out/array.o
