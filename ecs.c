@@ -1,6 +1,7 @@
 #include "ecs.h"
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 int alloc_id(array *entity, array *freelist) {
     assert(freelist->size == sizeof(int));
@@ -21,27 +22,42 @@ void drop_id(array *entity, array *freelist, int id) {
     *free_id = id;
 }
 
-void component_set(array *comp, int *ix, void const *val) {
-    if (*ix < 0) {
-        *ix = push(comp);
+static int push_component(component *c) {
+    if (c->cap == c->n) {
+        c->cap  = c->cap ? 2*c->cap : 1;
+        c->data = realloc(c->data, (size_t)c->cap * c->size);
+        c->id   = realloc(c->id,  (size_t)c->cap * sizeof *c->id);
     }
-    memcpy(ptr(comp, *ix), val, comp->size);
+    return c->n++;
 }
 
-void component_del(array *comp, int *ix, int *back) {
+static void* ptr_component(component const *c, int ix) {
+    return (char*)c->data + (size_t)ix * c->size;
+}
+
+void component_set(component *comp, int *ix, int owner, void const *val) {
+    if (*ix < 0) {
+        *ix = push_component(comp);
+        comp->id[*ix] = owner;
+    }
+    memcpy(ptr_component(comp, *ix), val, comp->size);
+}
+
+void component_del(component *comp, int *ix, int *back) {
     if (*ix >= 0) {
         int const last = comp->n - 1;
         if (*ix != last) {
-            void *dst = ptr(comp, *ix);
-            void *src = ptr(comp, last);
+            void *dst = ptr_component(comp, *ix);
+            void *src = ptr_component(comp, last);
             memcpy(dst, src, comp->size);
+            comp->id[*ix] = comp->id[last];
             *back = *ix;
         }
-        pop(comp);
+        comp->n--;
         *ix = ~0;
     }
 }
 
-void* component_get(array const *comp, int ix) {
-    return ix < 0 ? NULL : ptr(comp, ix);
+void* component_get(component const *comp, int ix) {
+    return ix < 0 ? NULL : ptr_component(comp, ix);
 }
