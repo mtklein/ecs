@@ -61,7 +61,7 @@ static void set_(int *ix, array *comp, void const *val) {
     memcpy(ptr(*comp, *ix), val, comp->size);
 }
 
-#define get(id, comp) get_(((struct entity*)ptr(entity,id))->comp, comp)
+#define get(id, comp) ((struct comp*)get_(((struct entity*)ptr(entity,id))->comp, comp))
 static void* get_(int ix, array comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
 }
