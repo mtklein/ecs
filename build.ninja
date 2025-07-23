@@ -19,7 +19,10 @@ rule link
 rule run
     command = ./$in > $out
 
-build out/array.o:  compile array.c
+build out/array.o:       compile  array.c
+build out/array_test.o:  compile  array_test.c
+build out/array_test:    link out/array_test.o out/array.o
+build out/array_test.ok: run  out/array_test
 
 build out/ecs.o:       compile  ecs.c
 build out/ecs_test.o:  compile  ecs_test.c
