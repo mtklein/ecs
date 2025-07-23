@@ -70,7 +70,7 @@ static void* get_(array comp, int ix) {
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
         struct pos const *p = ptr(pos, ix);
-        if (p->x == x && p->y == y) {
+        if (p == get(p->id, pos) && p->x == x && p->y == y) {
             return p->id;
         }
     }
