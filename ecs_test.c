@@ -8,6 +8,14 @@ static void free_data(void *p) {
     arr->data = NULL;
 }
 
+static void free_comp(void *p) {
+    component *comp = p;
+    free(comp->data);
+    free(comp->id);
+    comp->data = NULL;
+    comp->id   = NULL;
+}
+
 struct entity {
     int a,b;
 };
@@ -70,33 +78,41 @@ static void test_ids(void) {
 }
 
 static void test_components(void) {
-    __attribute__((cleanup(free_data)))
-    array comp = {.size = sizeof(int)};
+    __attribute__((cleanup(free_comp)))
+    component comp = {.size = sizeof(int)};
 
-    int ix = -1;
+    int a = -1, b = -1;
     int val = 1;
-    component_set(&comp, &ix, &val);
-    expect(    ix == 0);
-    expect(comp.n == 1);
-    expect(*(int*)component_get(&comp, ix) == val);
+    component_set(&comp, &a, 0, &val);
 
     val = 2;
-    component_set(&comp, &ix, &val);
-    expect(    ix == 0);
-    expect(comp.n == 1);
-    expect(*(int*)component_get(&comp, ix) == val);
+    component_set(&comp, &b, 1, &val);
 
-    component_del(&comp, &ix);
-    expect(ix == ~0);
-    expect(component_get(&comp, ix) == NULL);
+    expect(comp.n == 2);
+    expect(a == 0);
+    expect(b == 1);
+
+    component_del(&comp, &a, &b);
+    expect(a == ~0);
+    expect(b == 0);
+    expect(comp.n == 1);
+    expect(*(int*)component_get(&comp, b) == val);
 
     val = 3;
-    component_set(&comp, &ix, &val);
-    expect(    ix == 1);
+    component_set(&comp, &a, 0, &val);
+    expect(a == 1);
     expect(comp.n == 2);
-    TODO(      ix == 0);
-    TODO(  comp.n == 1);
-    expect(*(int*)component_get(&comp,ix) == val);
+    expect(*(int*)component_get(&comp, a) == val);
+
+    component_del(&comp, &b, &a);
+    expect(b == ~0);
+    expect(a == 0);
+    expect(comp.n == 1);
+
+    component_del(&comp, &a, &b);
+    expect(a == ~0);
+    expect(b == ~0);
+    expect(comp.n == 0);
 }
 
 int main(void) {

@@ -6,25 +6,24 @@
 #include <unistd.h>
 
 struct pos {
-    int id;
     int x,y;
 };
-static array pos = {.size = sizeof(struct pos)};
+static component pos = {.size = sizeof(struct pos)};
 
 struct stats {
     int hp, ac, atk, dmg;
 };
-static array stats = {.size = sizeof(struct stats)};
+static component stats = {.size = sizeof(struct stats)};
 
 struct glyph {
     char ch;
 };
-static array glyph = {.size = sizeof(struct glyph)};
+static component glyph = {.size = sizeof(struct glyph)};
 
 struct disp {
     enum { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } kind;
 };
-static array disp = {.size = sizeof(struct disp)};
+static component disp = {.size = sizeof(struct disp)};
 
 struct entity {
     int pos,
@@ -38,16 +37,26 @@ static array freelist = {.size = sizeof(int)};
 
 #define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
 
-#define attach(id, comp, ...) component_set(&comp, &ix(id,comp), &(struct comp){__VA_ARGS__})
-#define detach(id, comp)      component_del(&comp, &ix(id,comp))
+#define attach(id, comp, ...) component_set(&comp, &ix(id,comp), id, &(struct comp){__VA_ARGS__})
+#define detach(entity_id, comp)                                              \
+    detatch_(&comp, &ix(entity_id,comp), &ix(comp.id[comp.n-1], comp))
+
+static void detatch_(component *comp, int *ix, int *back_ix) {
+    int *back = ix;
+    int const last = comp->n - 1;
+    if (*ix != last) {
+        back = back_ix;
+    }
+    component_del(comp, ix, back);
+}
 #define lookup(id, comp)      (struct comp*)component_get(&comp, ix(id,comp))
 
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
-        struct pos const *p = ptr(&pos, ix);
-        if (p == lookup(p->id, pos) && p->x == x && p->y == y) {
-            return p->id;
+        struct pos const *p = component_get(&pos, ix);
+        if (p && p->x == x && p->y == y) {
+            return pos.id[ix];
         }
     }
     return 0;
@@ -149,7 +158,7 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id(&entity, &freelist);
-        attach(id, pos  , .id=id, .x=1, .y=1);
+        attach(id, pos  , .x=1, .y=1);
         attach(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
         attach(id, glyph, '@');
         attach(id, disp , LEADER);
@@ -157,7 +166,7 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id(&entity, &freelist);
-        attach(id, pos  , .id=id, .x=3, .y=1);
+        attach(id, pos  , .x=3, .y=1);
         attach(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
         attach(id, glyph, 'i');
         attach(id, disp , HOSTILE);
