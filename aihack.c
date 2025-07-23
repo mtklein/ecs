@@ -53,16 +53,16 @@ static void drop_id(int id) {
 }
 
 #define set(id, comp, ...) \
-    set_(&comp, &((struct entity*)ptr(entity,id))->comp, &(struct comp){__VA_ARGS__} )
-static void set_(array *comp, int *ix, void const *val) {
+    set_(&((struct entity*)ptr(entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
+static void set_(int *ix, array *comp, void const *val) {
     if (*ix < 0) {
         *ix = push(comp);
     }
     memcpy(ptr(*comp, *ix), val, comp->size);
 }
 
-#define get(id, comp) get_(comp, ((struct entity*)ptr(entity,id))->comp)
-static void* get_(array comp, int ix) {
+#define get(id, comp) get_(((struct entity*)ptr(entity,id))->comp, comp)
+static void* get_(int ix, array comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
 }
 
