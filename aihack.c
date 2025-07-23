@@ -52,17 +52,17 @@ static void drop_id(int id) {
     *free_id = id;
 }
 
-#define set(id, comp, ...) \
-    set_(&((struct entity*)ptr(&entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
-static void set_(int *ix, array *comp, void const *val) {
+#define attach(id, comp, ...) \
+    attach_(&((struct entity*)ptr(&entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
+static void attach_(int *ix, array *comp, void const *val) {
     if (*ix < 0) {
         *ix = push(comp);
     }
     memcpy(ptr(comp, *ix), val, comp->size);
 }
 
-#define get(id, comp) ((struct comp*)get_(((struct entity*)ptr(&entity,id))->comp, &comp))
-static void* get_(int ix, array const *comp) {
+#define lookup(id, comp) ((struct comp*)lookup_(((struct entity*)ptr(&entity,id))->comp, &comp))
+static void* lookup_(int ix, array const *comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
 }
 
@@ -70,7 +70,7 @@ static void* get_(int ix, array const *comp) {
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
         struct pos const *p = ptr(&pos, ix);
-        if (p == get(p->id, pos) && p->x == x && p->y == y) {
+        if (p == lookup(p->id, pos) && p->x == x && p->y == y) {
             return p->id;
         }
     }
@@ -91,8 +91,8 @@ static void draw(int w, int h) {
                 [MADDENED] = "\033[35m",
             };
 
-            struct disp  const *d = get(id, disp);
-            struct glyph const *g = get(id, glyph);
+            struct disp  const *d = lookup(id, disp);
+            struct glyph const *g = lookup(id, glyph);
             printf("%s%c", d ? color[d->kind] : "\033[0m"
                          , g ? g->ch          : '.');
         }
@@ -102,8 +102,8 @@ static void draw(int w, int h) {
 
 static _Bool alive(void) {
     for (int id = 0; id < entity.n; id++) {
-        struct disp  const *d = get(id, disp);
-        struct stats const *s = get(id, stats);
+        struct disp  const *d = lookup(id, disp);
+        struct stats const *s = lookup(id, stats);
         if (d && s) {
             if (d->kind == LEADER && s->hp > 0) {
                 return 1;
@@ -114,21 +114,21 @@ static _Bool alive(void) {
 }
 
 static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
-    struct stats const *as = get(attacker, stats);
-    struct stats       *ds = get(defender, stats);
+    struct stats const *as = lookup(attacker, stats);
+    struct stats       *ds = lookup(defender, stats);
     if (as && ds) {
         int const roll = d20(ctx);
         if (roll > 1) {
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    struct pos const *p = get(defender, pos),
+                    struct pos const *p = lookup(defender, pos),
                                   saved = *p;
                     drop_id(defender);
 
                     int const id = alloc_id();
-                    set(id, pos  , .id=id, .x=saved.x, .y=saved.y);
-                    set(id, glyph, 'x');
+                    attach(id, pos  , .id=id, .x=saved.x, .y=saved.y);
+                    attach(id, glyph, 'x');
                 }
             }
         }
@@ -137,8 +137,8 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
     for (int id = 0; id < entity.n; id++) {
-        struct disp const *d = get(id, disp);
-        struct pos        *p = get(id, pos);
+        struct disp const *d = lookup(id, disp);
+        struct pos        *p = lookup(id, pos);
         if (d && p && d->kind == LEADER) {
             int const x = p->x + dx,
                       y = p->y + dy;
@@ -175,18 +175,18 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id();
-        set(id, pos  , .id=id, .x=1, .y=1);
-        set(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
-        set(id, glyph, '@');
-        set(id, disp , LEADER);
+        attach(id, pos  , .id=id, .x=1, .y=1);
+        attach(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
+        attach(id, glyph, '@');
+        attach(id, disp , LEADER);
     }
 
     {
         int const id = alloc_id();
-        set(id, pos  , .id=id, .x=3, .y=1);
-        set(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
-        set(id, glyph, 'i');
-        set(id, disp , HOSTILE);
+        attach(id, pos  , .id=id, .x=3, .y=1);
+        attach(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
+        attach(id, glyph, 'i');
+        attach(id, disp , HOSTILE);
     }
 
     int const w=10, h=5;
