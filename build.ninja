@@ -1,7 +1,7 @@
 builddir = out
 
 san  = address,integer,undefined
-cc   = clang -fsanitize=$san -fno-sanitize-recover=$san
+cc   = clang-19 -fsanitize=$san -fno-sanitize-recover=$san
 warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
@@ -23,3 +23,6 @@ build out/aihack.o: compile  aihack.c
 build out/array.o:  compile  array.c
 build out/ecs.o:    compile  ecs.c
 build out/aihack:   link out/aihack.o out/array.o out/ecs.o
+build out/ecs_test.o: compile  ecs_test.c
+build out/ecs_test:   link out/ecs_test.o out/array.o out/ecs.o
+build out/ecs_test.ok: run out/ecs_test
