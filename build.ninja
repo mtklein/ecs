@@ -16,6 +16,9 @@ rule compile
 rule link
     command = $cc -lm $in -o $out
 
+rule run
+    command = ./$in > $out
+
 build out/aihack.o: compile  aihack.c
 build out/array.o:  compile  array.c
 build out/ecs.o:    compile  ecs.c
