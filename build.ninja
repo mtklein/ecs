@@ -9,7 +9,7 @@ warn = -Weverything $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
+    command = $cc -g -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
@@ -19,7 +19,7 @@ rule link
 rule run
     command = ./$in > $out
 
-build out/sparse_set.o: compile sparse_set.c
-
 build out/aihack.o: compile aihack.c
-build out/aihack:  link out/aihack.o out/sparse_set.o
+build out/ecs.o:    compile ecs.c
+
+build out/aihack: link out/aihack.o out/ecs.o
