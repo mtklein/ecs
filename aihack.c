@@ -52,8 +52,9 @@ static void drop_id(int id) {
     *free_id = id;
 }
 
-#define attach(id, comp, ...) \
-    attach_(&((struct entity*)ptr(&entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
+#define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
+
+#define attach(id, comp, ...) attach_(&ix(id,comp), &comp, &(struct comp){__VA_ARGS__} )
 static void attach_(int *ix, array *comp, void const *val) {
     if (*ix < 0) {
         *ix = push(comp);
@@ -61,13 +62,12 @@ static void attach_(int *ix, array *comp, void const *val) {
     memcpy(ptr(comp, *ix), val, comp->size);
 }
 
-#define detach(id, comp) \
-    detach_(&((struct entity*)ptr(&entity,id))->comp)
+#define detach(id, comp) detach_(&ix(id,comp))
 static void detach_(int *ix) {
     *ix = -1;
 }
 
-#define lookup(id, comp) ((struct comp*)lookup_(((struct entity*)ptr(&entity,id))->comp, &comp))
+#define lookup(id, comp) ((struct comp*)lookup_(ix(id,comp), &comp))
 static void* lookup_(int ix, array const *comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
 }
@@ -128,10 +128,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    struct glyph *g = lookup(defender, glyph);
-                    if (g) {
-                        g->ch = 'x';
-                    }
+                    attach(defender, glyph, 'x');
                     detach(defender, stats);
                     detach(defender, disp);
                 }
