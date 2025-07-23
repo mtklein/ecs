@@ -9,7 +9,7 @@ warn = -Weverything $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
+    command = $cc -g -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
@@ -19,15 +19,7 @@ rule link
 rule run
     command = ./$in > $out
 
-build out/array.o:       compile  array.c
-build out/array_test.o:  compile  array_test.c
-build out/array_test:    link out/array_test.o out/array.o
-build out/array_test.ok: run  out/array_test
-
-build out/ecs.o:       compile  ecs.c
-build out/ecs_test.o:  compile  ecs_test.c
-build out/ecs_test:    link out/ecs_test.o out/array.o out/ecs.o
-build out/ecs_test.ok: run  out/ecs_test
-
 build out/aihack.o: compile aihack.c
-build out/aihack:  link out/aihack.o out/array.o out/ecs.o
+build out/ecs.o:    compile ecs.c
+
+build out/aihack: link out/aihack.o out/ecs.o

@@ -1,10 +1,10 @@
 #pragma once
+#include <stddef.h>
 
-#include "array.h"
+typedef struct {
+    int *id,*ix;
+    int   n,cap;
+} component;
 
-int alloc_id(array *entity, array *freelist);
-void drop_id(array *entity, array *freelist, int id);
-
-void  component_set(array       *comp, int *ix, void const *val);
-void  component_del(array       *comp, int *ix);
-void* component_get(array const *comp, int  ix);
+void* component_attach(void *data, size_t size, component*, int id);
+void  component_detach(void *data, size_t size, component*, int id);

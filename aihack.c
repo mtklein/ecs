@@ -1,56 +1,40 @@
-#include "array.h"
 #include "ecs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
-struct pos {
-    int id;
-    int x,y;
-};
-static array pos = {.size = sizeof(struct pos)};
+static int const nil = 0;
+static int       ids = 1;
+
+static struct pos {int x,y;} *pos;
+static component              pos_comp;
 
 struct stats {
     int hp, ac, atk, dmg;
 };
-static array stats = {.size = sizeof(struct stats)};
+static struct stats *stats;
+static component     stats_comp;
 
-struct glyph {
-    char ch;
-};
-static array glyph = {.size = sizeof(struct glyph)};
+static char     *glyph;
+static component glyph_comp;
 
-struct disp {
-    enum { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } kind;
-};
-static array disp = {.size = sizeof(struct disp)};
+enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
+static enum disposition *disp;
+static component         disp_comp;
 
-struct entity {
-    int pos,
-        stats,
-        glyph,
-        disp;
-};
-static array entity = {.size = sizeof(struct entity)};
-
-static array freelist = {.size = sizeof(int)};
-
-#define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
-
-#define attach(id, comp, ...) component_set(&comp, &ix(id,comp), &(struct comp){__VA_ARGS__})
-#define detach(id, comp)      component_del(&comp, &ix(id,comp))
-#define lookup(id, comp)      (struct comp*)component_get(&comp, ix(id,comp))
-
+#define get(id, c) (c##_comp.ix[id] >= 0 ? c + c##_comp.ix[id] : NULL)
+#define set(id, c) (c=component_attach(c, sizeof *c, &c##_comp, id))[c##_comp.ix[id]]
+#define del(id, c)    component_detach(c, sizeof *c, &c##_comp, id)
 
 static int entity_at(int x, int y) {
-    for (int ix = 0; ix < pos.n; ix++) {
-        struct pos const *p = ptr(&pos, ix);
-        if (p == lookup(p->id, pos) && p->x == x && p->y == y) {
-            return p->id;
+    for (int ix = 0; ix < pos_comp.n; ix++) {
+        struct pos const *p = pos + ix;
+        if (p->x == x && p->y == y) {
+            return pos_comp.id[ix];
         }
     }
-    return 0;
+    return nil;
 }
 
 static void draw(int w, int h) {
@@ -67,21 +51,21 @@ static void draw(int w, int h) {
                 [MADDENED] = "\033[35m",
             };
 
-            struct disp  const *d = lookup(id, disp);
-            struct glyph const *g = lookup(id, glyph);
-            printf("%s%c", d ? color[d->kind] : "\033[0m"
-                         , g ? g->ch          : '.');
+            enum disposition const *d = get(id, disp);
+            char             const *g = get(id, glyph);
+            printf("%s%c", d ? color[*d] : "\033[0m"
+                         , g ?       *g  : '.');
         }
         printf("\n");
     }
 }
 
 static _Bool alive(void) {
-    for (int id = 0; id < entity.n; id++) {
-        struct disp  const *d = lookup(id, disp);
-        struct stats const *s = lookup(id, stats);
+    for (int id = 0; id < ids; id++) {
+        enum disposition const *d = get(id, disp);
+        struct stats const *s = get(id, stats);
         if (d && s) {
-            if (d->kind == LEADER && s->hp > 0) {
+            if (*d == LEADER && s->hp > 0) {
                 return 1;
             }
         }
@@ -90,30 +74,31 @@ static _Bool alive(void) {
 }
 
 static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
-    struct stats const *as = lookup(attacker, stats);
-    struct stats       *ds = lookup(defender, stats);
+    struct stats const *as = get(attacker, stats);
+    struct stats       *ds = get(defender, stats);
     if (as && ds) {
         int const roll = d20(ctx);
         if (roll > 1) {
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    attach(defender, glyph, 'x');
-                    detach(defender, stats);
-                    detach(defender, disp);
+                    set(defender, glyph) = 'x';
+                    del(defender, stats);
+                    del(defender, disp);
                 }
             }
         }
     } else if (as && !ds) {
-        drop_id(&entity, &freelist, defender);
+        del(defender, pos);
+        del(defender, glyph);
     }
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    for (int id = 0; id < entity.n; id++) {
-        struct disp const *d = lookup(id, disp);
-        struct pos        *p = lookup(id, pos);
-        if (d && p && d->kind == LEADER) {
+    for (int id = 0; id < ids; id++) {
+        enum disposition const *d = get(id, disp);
+        struct pos             *p = get(id, pos);
+        if (d && p && *d == LEADER) {
             int const x = p->x + dx,
                       y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
@@ -145,22 +130,20 @@ static int d20(void *ctx) {
 int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
-    (void)alloc_id(&entity, &freelist);
-
     {
-        int const id = alloc_id(&entity, &freelist);
-        attach(id, pos  , .id=id, .x=1, .y=1);
-        attach(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
-        attach(id, glyph, '@');
-        attach(id, disp , LEADER);
+        int const id = ids++;
+        set(id, pos)   = (struct pos){1,1};
+        set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
+        set(id, glyph) = '@';
+        set(id, disp)  = LEADER;
     }
 
     {
-        int const id = alloc_id(&entity, &freelist);
-        attach(id, pos  , .id=id, .x=3, .y=1);
-        attach(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
-        attach(id, glyph, 'i');
-        attach(id, disp , HOSTILE);
+        int const id = ids++;
+        set(id, pos)   = (struct pos){3,1};
+        set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
+        set(id, glyph) = 'i';
+        set(id, disp)  = HOSTILE;
     }
 
     int const w=10, h=5;
