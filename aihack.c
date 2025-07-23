@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 struct pos {
+    int id;
     int x,y;
 };
 static array pos = {.size = sizeof(struct pos)};
@@ -32,7 +33,6 @@ struct entity {
         disp;
 };
 static array entity = {.size = sizeof(struct entity)};
-#define scan(id) for (int id = 0; id < entity.n; id++)
 
 static array freelist = {.size = sizeof(int)};
 
@@ -68,10 +68,10 @@ static void* get_(array const *comp, int ix) {
 
 
 static int entity_at(int x, int y) {
-    scan(id) {
-        struct pos const *p = get(id, pos);
-        if (p && p->x == x && p->y == y) {
-            return id;
+    for (int ix = 0; ix < pos.n; ix++) {
+        struct pos const *p = ptr(&pos, ix);
+        if (p->x == x && p->y == y) {
+            return p->id;
         }
     }
     return 0;
@@ -101,7 +101,7 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    scan(id) {
+    for (int id = 0; id < entity.n; id++) {
         struct disp  const *d = get(id, disp);
         struct stats const *s = get(id, stats);
         if (d && s) {
@@ -127,7 +127,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
                     drop_id(defender);
 
                     int const id = alloc_id();
-                    set(id, pos  , saved.x, saved.y);
+                    set(id, pos  , .id=id, .x=saved.x, .y=saved.y);
                     set(id, glyph, 'x');
                 }
             }
@@ -136,7 +136,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    scan(id) {
+    for (int id = 0; id < entity.n; id++) {
         struct disp const *d = get(id, disp);
         struct pos        *p = get(id, pos);
         if (d && p && d->kind == LEADER) {
@@ -175,7 +175,7 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id();
-        set(id, pos  , 1,1);
+        set(id, pos  , .id=id, .x=1, .y=1);
         set(id, stats, .hp=10, .ac=10, .atk=2, .dmg=4);
         set(id, glyph, '@');
         set(id, disp , LEADER);
@@ -183,7 +183,7 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id();
-        set(id, pos  , 3,1);
+        set(id, pos  , .id=id, .x=3, .y=1);
         set(id, stats, .hp=4, .ac=12, .atk=3, .dmg=2);
         set(id, glyph, 'i');
         set(id, disp , HOSTILE);
