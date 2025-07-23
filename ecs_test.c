@@ -86,16 +86,14 @@ static void test_components(void) {
     expect(comp.n == 1);
     expect(*(int*)component_get(&comp, ix) == val);
 
-    component_del(&comp, &ix);
+    component_del(&comp, &ix, &ix);
     expect(ix == ~0);
     expect(component_get(&comp, ix) == NULL);
 
     val = 3;
     component_set(&comp, &ix, &val);
-    expect(    ix == 1);
-    expect(comp.n == 2);
-    TODO(      ix == 0);
-    TODO(  comp.n == 1);
+    expect(    ix == 0);
+    expect(comp.n == 1);
     expect(*(int*)component_get(&comp,ix) == val);
 }
 

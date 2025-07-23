@@ -28,9 +28,18 @@ void component_set(array *comp, int *ix, void const *val) {
     memcpy(ptr(comp, *ix), val, comp->size);
 }
 
-void component_del(array *comp, int *ix) {
-    (void)comp;
-    *ix = ~0;
+void component_del(array *comp, int *ix, int *back) {
+    if (*ix >= 0) {
+        int const last = comp->n - 1;
+        if (*ix != last) {
+            void *dst = ptr(comp, *ix);
+            void *src = ptr(comp, last);
+            memcpy(dst, src, comp->size);
+            *back = *ix;
+        }
+        pop(comp);
+        *ix = ~0;
+    }
 }
 
 void* component_get(array const *comp, int ix) {

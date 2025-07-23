@@ -39,7 +39,7 @@ static array freelist = {.size = sizeof(int)};
 #define ix(id,comp) ((struct entity*)ptr(&entity,id))->comp
 
 #define attach(id, comp, ...) component_set(&comp, &ix(id,comp), &(struct comp){__VA_ARGS__})
-#define detach(id, comp)      component_del(&comp, &ix(id,comp))
+#define detach(id, comp)      component_del(&comp, &ix(id,comp), &ix(id,comp))
 #define lookup(id, comp)      (struct comp*)component_get(&comp, ix(id,comp))
 
 
