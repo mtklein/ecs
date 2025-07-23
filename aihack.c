@@ -40,7 +40,7 @@ static int alloc_id(void) {
     for (int const *id = pop(&freelist); id;) {
         return *id;
     }
-    int const id = grow(&entity);
+    int const id = push(&entity);
     memset(ptr(entity, id), ~0, entity.size);
     return id;
 }
@@ -48,7 +48,7 @@ static int alloc_id(void) {
 static void drop_id(int id) {
     memset(ptr(entity, id), ~0, entity.size);
 
-    int *free_id = ptr(freelist, grow(&freelist));
+    int *free_id = ptr(freelist, push(&freelist));
     *free_id = id;
 }
 
@@ -56,7 +56,7 @@ static void drop_id(int id) {
     set_(&comp, &((struct entity*)ptr(entity,id))->comp, &(struct comp){__VA_ARGS__} )
 static void set_(array *comp, int *ix, void const *val) {
     if (*ix < 0) {
-        *ix = grow(comp);
+        *ix = push(comp);
     }
     memcpy(ptr(*comp, *ix), val, comp->size);
 }

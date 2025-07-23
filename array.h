@@ -8,7 +8,7 @@ typedef struct {
     int          n,cap;
 } array;
 
-int  grow(array*);
+int  push(array*);
 void* pop(array*);
 
 void* ptr(array, int ix);

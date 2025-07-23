@@ -1,7 +1,7 @@
 #include "array.h"
 #include <stdlib.h>
 
-int grow(array *arr) {
+int push(array *arr) {
     if (arr->cap == arr->n) {
         arr->cap  = arr->cap ? 2*arr->cap : 1;
         arr->data = realloc(arr->data, (size_t)arr->cap * arr->size);
