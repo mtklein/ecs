@@ -10,9 +10,9 @@ int push(array *arr) {
 }
 
 void* pop(array *arr) {
-    return arr->n ? ptr(*arr, --arr->n) : NULL;
+    return arr->n ? ptr(arr, --arr->n) : NULL;
 }
 
-void* ptr(array arr, int ix) {
-    return (char*)arr.data + (size_t)ix * arr.size;
+void* ptr(array const *arr, int ix) {
+    return (char*)arr->data + (size_t)ix * arr->size;
 }

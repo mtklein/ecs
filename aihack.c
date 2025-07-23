@@ -41,35 +41,35 @@ static int alloc_id(void) {
         return *id;
     }
     int const id = push(&entity);
-    memset(ptr(entity, id), ~0, entity.size);
+    memset(ptr(&entity, id), ~0, entity.size);
     return id;
 }
 
 static void drop_id(int id) {
-    memset(ptr(entity, id), ~0, entity.size);
+    memset(ptr(&entity, id), ~0, entity.size);
 
-    int *free_id = ptr(freelist, push(&freelist));
+    int *free_id = ptr(&freelist, push(&freelist));
     *free_id = id;
 }
 
 #define set(id, comp, ...) \
-    set_(&((struct entity*)ptr(entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
+    set_(&((struct entity*)ptr(&entity,id))->comp, &comp, &(struct comp){__VA_ARGS__} )
 static void set_(int *ix, array *comp, void const *val) {
     if (*ix < 0) {
         *ix = push(comp);
     }
-    memcpy(ptr(*comp, *ix), val, comp->size);
+    memcpy(ptr(comp, *ix), val, comp->size);
 }
 
-#define get(id, comp) ((struct comp*)get_(((struct entity*)ptr(entity,id))->comp, comp))
-static void* get_(int ix, array comp) {
+#define get(id, comp) ((struct comp*)get_(((struct entity*)ptr(&entity,id))->comp, &comp))
+static void* get_(int ix, array const *comp) {
     return ix < 0 ? NULL : ptr(comp, ix);
 }
 
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
-        struct pos const *p = ptr(pos, ix);
+        struct pos const *p = ptr(&pos, ix);
         if (p == get(p->id, pos) && p->x == x && p->y == y) {
             return p->id;
         }

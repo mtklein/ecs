@@ -11,4 +11,4 @@ typedef struct {
 int  push(array*);
 void* pop(array*);
 
-void* ptr(array, int ix);
+void* ptr(array const*, int ix);
