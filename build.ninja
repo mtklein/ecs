@@ -1,15 +1,15 @@
 builddir = out
 
-san  = address,undefined
-cc   = gcc -fsanitize=$san -fno-sanitize-recover=$san
-warn = -Wall -Wextra $
+san  = address,integer,undefined
+cc   = clang -fsanitize=$san -fno-sanitize-recover=$san
+warn = -Weverything $
        -Wno-declaration-after-statement $
        -Wno-poison-system-directories $
        -Wno-switch-default $
        -Wno-unsafe-buffer-usage $
 
 rule compile
-    command = $cc -g -Og -Werror $warn -fdiagnostics-color=always -MD -MF $out.d -c $in -o $out
+    command = $cc -g -Og -Werror $warn -fcolor-diagnostics -MD -MF $out.d -c $in -o $out
     depfile = $out.d
     deps    = gcc
 
@@ -19,16 +19,15 @@ rule link
 rule run
     command = ./$in > $out
 
-build out/array.o:  compile array.c
+build out/array.o:       compile  array.c
+build out/array_test.o:  compile  array_test.c
+build out/array_test:    link out/array_test.o out/array.o
+build out/array_test.ok: run  out/array_test
 
 build out/ecs.o:       compile  ecs.c
 build out/ecs_test.o:  compile  ecs_test.c
 build out/ecs_test:    link out/ecs_test.o out/array.o out/ecs.o
 build out/ecs_test.ok: run  out/ecs_test
-
-build out/array_test.o: compile array_test.c
-build out/array_test:   link out/array_test.o out/array.o
-build out/array_test.ok: run out/array_test
 
 build out/aihack.o: compile aihack.c
 build out/aihack:  link out/aihack.o out/array.o out/ecs.o

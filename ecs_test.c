@@ -1,16 +1,6 @@
 #include "ecs.h"
-#include <stdio.h>
+#include "test.h"
 #include <stdlib.h>
-
-#ifndef __has_builtin
-#   define __has_builtin(x) 0
-#endif
-#if !__has_builtin(__builtin_debugtrap)
-#   define __builtin_debugtrap() __builtin_trap()
-#endif
-#define expect(x) \
-    if (!(x)) fprintf(stderr, "%s:%d expect(%s)\n", __FILE__, __LINE__, #x), __builtin_debugtrap()
-#define TODO(x) expect(!(x))
 
 static void free_data(void *p) {
     array *arr = p;
