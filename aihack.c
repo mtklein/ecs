@@ -132,8 +132,24 @@ static int d20(void *ctx) {
     return 1 + (int)(*seed % 20);
 }
 
+static void reset_terminal(void) {
+    printf("\033[?1049l");
+}
+
 int main(int argc, char const* argv[]) {
+    int const w=10, h=5;
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
+
+    {
+        struct termios termios;
+        tcgetattr(STDIN_FILENO, &termios);
+        termios.c_lflag &= ~(tcflag_t)(ICANON|ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &termios);
+    }
+    printf("\033[?1049h");
+    printf("\033[?25l");
+    atexit(reset_terminal);
+
 
     {
         int const id = alloc_id();
@@ -142,7 +158,6 @@ int main(int argc, char const* argv[]) {
         set(id, glyph) = '@';
         set(id, disp)  = LEADER;
     }
-
     {
         int const id = alloc_id();
         set(id, pos)   = (struct pos){3,1};
@@ -151,23 +166,12 @@ int main(int argc, char const* argv[]) {
         set(id, disp)  = HOSTILE;
     }
 
-    int const w=10, h=5;
-
-    {
-        struct termios termios;
-        tcgetattr(STDIN_FILENO, &termios);
-        termios.c_lflag &= ~(tcflag_t)(ICANON|ECHO);
-        tcsetattr(STDIN_FILENO, TCSANOW, &termios);
-    }
-
-    printf("\033[?1049h");
-    printf("\033[?25l");
     while (alive()) {
         printf("\033[H");
         draw(w,h);
 
         switch (getchar()) {
-            case 'q': goto exit;
+            case 'q': return 0;
 
             case 'h': move(-1,0,w,h, d20,&seed); break;
             case 'j': move(0,+1,w,h, d20,&seed); break;
@@ -175,7 +179,5 @@ int main(int argc, char const* argv[]) {
             case 'l': move(+1,0,w,h, d20,&seed); break;
         }
     }
-exit:
-    printf("\033[?1049l");
-    return 0;
+    return 1;
 }
