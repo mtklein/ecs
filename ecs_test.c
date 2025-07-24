@@ -103,9 +103,36 @@ static void test_detach_invalid(void) {
     expect(meta.n == 0);
 }
 
+static void test_lookup(void) {
+    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
+    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+
+    expect(component_lookup(vals, sizeof *vals, &meta, 1) == NULL);
+
+    vals = component_attach(vals, sizeof *vals, &meta, 2);
+    vals = component_attach(vals, sizeof *vals, &meta, 5);
+    vals[meta.ix[2]] = 22;
+    vals[meta.ix[5]] = 55;
+
+    expect(component_lookup(vals, sizeof *vals, &meta, 2) == vals + meta.ix[2]);
+    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 2) == 22);
+    expect(component_lookup(vals, sizeof *vals, &meta, 5) == vals + meta.ix[5]);
+    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 5) == 55);
+
+    expect(component_lookup(vals, sizeof *vals, &meta, 3) == NULL);
+
+    component_detach(vals, sizeof *vals, &meta, 2);
+    expect(component_lookup(vals, sizeof *vals, &meta, 2) == NULL);
+    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 5) == 55);
+
+    component_detach(vals, sizeof *vals, &meta, 5);
+    expect(component_lookup(vals, sizeof *vals, &meta, 5) == NULL);
+}
+
 int main(void) {
     test_attach_detach();
     test_high_id();
     test_detach_invalid();
+    test_lookup();
     return 0;
 }
