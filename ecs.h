@@ -4,7 +4,7 @@
 typedef struct {
     int *id,*ix;
     int   n,cap;
-} component;
+} sparse_set;
 
-void* component_attach(void *data, size_t size, component*, int id);
-void  component_detach(void *data, size_t size, component*, int id);
+void* component_attach(void *data, size_t size, sparse_set*, int id);
+void  component_detach(void *data, size_t size, sparse_set*, int id);

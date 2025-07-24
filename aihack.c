@@ -8,30 +8,30 @@ static int const nil = 0;
 static int       ids = 1;
 
 static struct pos {int x,y;} *pos;
-static component              pos_comp;
+static sparse_set             pos_meta;
 
 struct stats {
     int hp, ac, atk, dmg;
 };
 static struct stats *stats;
-static component     stats_comp;
+static sparse_set    stats_meta;
 
-static char     *glyph;
-static component glyph_comp;
+static char      *glyph;
+static sparse_set glyph_meta;
 
 enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
 static enum disposition *disp;
-static component         disp_comp;
+static sparse_set        disp_meta;
 
-#define get(id, c) (c##_comp.ix[id] >= 0 ? c + c##_comp.ix[id] : NULL)
-#define set(id, c) (c=component_attach(c, sizeof *c, &c##_comp, id))[c##_comp.ix[id]]
-#define del(id, c)    component_detach(c, sizeof *c, &c##_comp, id)
+#define get(id, c) (c##_meta.ix[id] >= 0 ? c + c##_meta.ix[id] : NULL)
+#define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
+#define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
 static int entity_at(int x, int y) {
-    for (int ix = 0; ix < pos_comp.n; ix++) {
+    for (int ix = 0; ix < pos_meta.n; ix++) {
         struct pos const *p = pos + ix;
         if (p->x == x && p->y == y) {
-            return pos_comp.id[ix];
+            return pos_meta.id[ix];
         }
     }
     return nil;
