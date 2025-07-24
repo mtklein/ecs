@@ -33,10 +33,9 @@ static sparse_set        disp_meta;
 #define scan(c, ix,id) for (int ix=0,id=~0; ix < c##_meta.n && (id=c##_meta.id[ix]); ix++)
 
 static int entity_at(int x, int y) {
-    for (int ix = 0; ix < pos_meta.n; ix++) {
-        struct pos const *p = pos + ix;
-        if (p->x == x && p->y == y) {
-            return pos_meta.id[ix];
+    scan(pos, ix,id) {
+        if (pos[ix].x == x && pos[ix].y == y) {
+            return id;
         }
     }
     return nil;
