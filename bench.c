@@ -80,9 +80,8 @@ static void run(char const *pattern,
     if (strstr(name, pattern)) {
         printf("%s\n", name);
 
-        int lgN = 10;
-        double min,max;
-        do {
+        double min = 0, max = 1;
+        for (int lgN = 10; min < max; lgN++) {
             int const N = 1<<lgN;
             min = +1/0.0;
             max = -1/0.0;
@@ -100,8 +99,7 @@ static void run(char const *pattern,
             for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("●"); }
             for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("◌"); }
             printf("\n");
-            lgN++;
-        } while (min < max);
+        }
         printf("\n");
     }
 }
