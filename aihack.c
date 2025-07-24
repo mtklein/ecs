@@ -30,7 +30,7 @@ static sparse_set        disp_meta;
 #define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
 #define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
-#define scan(c, ix,id) for (int ix=0,id=~0; ix < c.n ? (id=c.id[ix],1) : 0; ix++)
+#define scan(c, ix,id) for (int ix=0,id=~0; ix < c.n && (id=c.id[ix]); ix++)
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos_meta.n; ix++) {
