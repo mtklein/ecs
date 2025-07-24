@@ -10,7 +10,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void* component_attach(void *data, size_t const size, sparse_set* const meta, int const id) {
+void* component_attach(void *data, size_t size, sparse_set *meta, int id) {
     if (id >= meta->cap) {
         int const grown = max(id+1, 2*meta->cap);
         meta->ix = realloc(meta->ix, (size_t)grown * sizeof *meta->ix);
@@ -32,7 +32,7 @@ void* component_attach(void *data, size_t const size, sparse_set* const meta, in
     return data;
 }
 
-void component_detach(void* const data, size_t const size, sparse_set* const meta, int const id) {
+void component_detach(void *data, size_t size, sparse_set *meta, int id) {
     if (id < meta->cap) {
         int const ix = meta->ix[id];
         if (ix >= 0) {
@@ -45,4 +45,14 @@ void component_detach(void* const data, size_t const size, sparse_set* const met
             meta->ix[id] = ~0;
         }
     }
+}
+
+void* component_lookup(void *data, size_t size, sparse_set const *meta, int id) {
+    if (id < meta->cap) {
+        int const ix = meta->ix[id];
+        if (ix >= 0) {
+            return (char*)data + (size_t)ix * size;
+        }
+    }
+    return NULL;
 }

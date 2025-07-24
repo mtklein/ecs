@@ -26,7 +26,7 @@ enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
 static enum disposition *disp;
 static sparse_set        disp_meta;
 
-#define get(id, c) (c##_meta.ix[id] >= 0 ? c + c##_meta.ix[id] : NULL)
+#define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
 #define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
 #define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
