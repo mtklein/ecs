@@ -155,7 +155,8 @@ int main(int argc, char const* argv[]) {
     }
     {
         int const id = alloc_id();
-        set(id, pos)   = (struct pos){3,1};
+        set(id, pos).x = 3;
+        set(id, pos).y = 1;
         set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
         set(id, glyph) = 'i';
         set(id, disp)  = HOSTILE;
