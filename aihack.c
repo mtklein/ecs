@@ -26,9 +26,10 @@ enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
 static enum disposition *disp;
 static sparse_set        disp_meta;
 
-#define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
-#define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
-#define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
+#define  get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
+#define  set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
+#define  del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
+#define scan(id, c) for (int id=~0, *idp = c.id; idp != c.id + c.n ? (id=*idp,1) : 0; idp++)
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos_meta.n; ix++) {
@@ -64,9 +65,8 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    for (int ix = 0; ix < disp_meta.n; ix++) {
-        int const id = disp_meta.id[ix];
-        enum disposition const *d = disp + ix;
+    scan(id, disp_meta) {
+        enum disposition const *d = get(id, disp);
         struct stats     const *s = get(id, stats);
         if (s) {
             if (*d == LEADER && s->hp > 0) {
@@ -99,9 +99,8 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    for (int ix = 0; ix < disp_meta.n; ix++) {
-        int const id = disp_meta.id[ix];
-        enum disposition const *d = disp + ix;
+    scan(id, disp_meta) {
+        enum disposition const *d = get(id, disp);
         struct pos             *p = get(id, pos);
         if (*d == LEADER && p) {
             int const x = p->x + dx,
