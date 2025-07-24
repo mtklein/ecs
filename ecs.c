@@ -10,41 +10,41 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void* component_attach(void *data, size_t const size, sparse_set* const comp, int const id) {
-    if (id >= comp->cap) {
-        int const cap = max(id+1, 2*comp->cap);
-        comp->ix = realloc(comp->ix, (size_t)cap * sizeof *comp->ix);
-        for (int i = comp->cap; i < cap; i++) {
-            comp->ix[i] = ~0;
+void* component_attach(void *data, size_t const size, sparse_set* const meta, int const id) {
+    if (id >= meta->cap) {
+        int const cap = max(id+1, 2*meta->cap);
+        meta->ix = realloc(meta->ix, (size_t)cap * sizeof *meta->ix);
+        for (int i = meta->cap; i < cap; i++) {
+            meta->ix[i] = ~0;
         }
-        comp->cap = cap;
+        meta->cap = cap;
     }
 
-    if (comp->ix[id] < 0) {
-        if (is_pow2_or_zero(comp->n)) {
-            int const cap = comp->n ? 2*comp->n : 1;
+    if (meta->ix[id] < 0) {
+        if (is_pow2_or_zero(meta->n)) {
+            int const cap = meta->n ? 2*meta->n : 1;
             data     = realloc(data    , (size_t)cap * size            );
-            comp->id = realloc(comp->id, (size_t)cap * sizeof *comp->id);
+            meta->id = realloc(meta->id, (size_t)cap * sizeof *meta->id);
         }
-        int const ix = comp->n++;
-        comp->id[ix] = id;
-        comp->ix[id] = ix;
+        int const ix = meta->n++;
+        meta->id[ix] = id;
+        meta->ix[id] = ix;
     }
 
     return data;
 }
 
-void component_detach(void* const data, size_t const size, sparse_set* const comp, int const id) {
-    if (id < comp->cap) {
-        int const ix = comp->ix[id];
+void component_detach(void* const data, size_t const size, sparse_set* const meta, int const id) {
+    if (id < meta->cap) {
+        int const ix = meta->ix[id];
         if (ix >= 0) {
-            int const last = --comp->n;
+            int const last = --meta->n;
             memmove((char      *)data + (size_t)ix   * size,
                     (char const*)data + (size_t)last * size, size);
-            int const last_id = comp->id[last];
-            comp->id[ix] = last_id;
-            comp->ix[last_id] = ix;
-            comp->ix[id] = ~0;
+            int const last_id = meta->id[last];
+            meta->id[ix] = last_id;
+            meta->ix[last_id] = ix;
+            meta->ix[id] = ~0;
         }
     }
 }
