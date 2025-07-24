@@ -65,12 +65,10 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    scan(disp, ix,id) {
-        struct stats const *s = get(id, stats);
-        if (s) {
-            if (disp[ix] == LEADER && s->hp > 0) {
-                return 1;
-            }
+    scan(stats, ix,id) {
+        enum disposition const *d = get(id, disp);
+        if (d && disp[ix] == LEADER && stats[ix].hp > 0) {
+            return 1;
         }
     }
     return 0;
