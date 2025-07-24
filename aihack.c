@@ -30,11 +30,11 @@ static sparse_set        disp_meta;
 #define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
 #define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
-#define scan(c, ix,id) for (int ix=0,id=~0; ix < c##_meta.n && (id=c##_meta.id[ix]); ix++)
+#define scan(c, p,id) c; for (int id=~0; p != c+c##_meta.n && (id=c##_meta.id[p-c]); p++)
 
 static int entity_at(int x, int y) {
-    scan(pos, ix,id) {
-        if (pos[ix].x == x && pos[ix].y == y) {
+    struct pos const *p = scan(pos, p,id) {
+        if (p->x == x && p->y == y) {
             return id;
         }
     }
@@ -65,9 +65,9 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    scan(stats, ix,id) {
+    struct stats const *s = scan(stats, s,id) {
         enum disposition const *d = get(id, disp);
-        if (d && *d == LEADER && stats[ix].hp > 0) {
+        if (d && *d == LEADER && s->hp > 0) {
             return 1;
         }
     }
@@ -96,11 +96,11 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    scan(pos, ix,id) {
+    struct pos *p = scan(pos, p,id) {
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER) {
-            int const x = pos[ix].x + dx,
-                      y = pos[ix].y + dy;
+            int const x = p->x + dx,
+                      y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
                 continue;
             }
@@ -109,8 +109,8 @@ static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx)
             if (found) {
                 combat(id,found, d20,ctx);
             } else {
-                pos[ix].x = x;
-                pos[ix].y = y;
+                p->x = x;
+                p->y = y;
             }
         }
     }
