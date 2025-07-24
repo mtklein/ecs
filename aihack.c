@@ -30,7 +30,7 @@ static sparse_set        disp_meta;
 #define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
 #define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
-#define scan(c, ix,id) for (int ix=0,id=~0; ix < c.n && (id=c.id[ix]); ix++)
+#define scan(c, ix,id) for (int ix=0,id=~0; ix < c##_meta.n && (id=c##_meta.id[ix]); ix++)
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos_meta.n; ix++) {
@@ -66,7 +66,7 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    scan(disp_meta, ix,id) {
+    scan(disp, ix,id) {
         enum disposition const *d = disp+ix;
         struct stats     const *s = get(id, stats);
         if (s) {
@@ -100,7 +100,7 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    scan(pos_meta, ix,id) {
+    scan(pos, ix,id) {
         struct pos             *p = pos+ix;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER) {
