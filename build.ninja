@@ -25,8 +25,12 @@ build out/ecs_test.o:  compile  ecs_test.c
 build out/ecs_test:    link out/ecs_test.o out/ecs.o
 build out/ecs_test.ok: run  out/ecs_test
 
+build out/opt.o:   compile ecs.c
+    cc = clang -O1
 build out/bench.o: compile bench.c
-build out/bench:   link out/bench.o out/ecs.o
+    cc = clang -O1
+build out/bench:   link out/bench.o out/opt.o
+    cc = clang
 
 build out/aihack.o: compile  aihack.c
 build out/aihack:   link out/aihack.o out/ecs.o
