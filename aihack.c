@@ -5,7 +5,10 @@
 #include <unistd.h>
 
 static int const nil = 0;
-static int       ids = 1;
+static int alloc_id(void) {
+    static int next = 1;
+    return next++;
+}
 
 static struct pos {int x,y;} *pos;
 static sparse_set             pos_meta;
@@ -61,10 +64,11 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    for (int id = 0; id < ids; id++) {
-        enum disposition const *d = get(id, disp);
-        struct stats const *s = get(id, stats);
-        if (d && s) {
+    for (int ix = 0; ix < disp_meta.n; ix++) {
+        int const id = disp_meta.id[ix];
+        enum disposition const *d = disp + ix;
+        struct stats     const *s = get(id, stats);
+        if (s) {
             if (*d == LEADER && s->hp > 0) {
                 return 1;
             }
@@ -95,10 +99,11 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    for (int id = 0; id < ids; id++) {
-        enum disposition const *d = get(id, disp);
+    for (int ix = 0; ix < disp_meta.n; ix++) {
+        int const id = disp_meta.id[ix];
+        enum disposition const *d = disp + ix;
         struct pos             *p = get(id, pos);
-        if (d && p && *d == LEADER) {
+        if (*d == LEADER && p) {
             int const x = p->x + dx,
                       y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
@@ -131,7 +136,7 @@ int main(int argc, char const* argv[]) {
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
     {
-        int const id = ids++;
+        int const id = alloc_id();
         set(id, pos)   = (struct pos){1,1};
         set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
         set(id, glyph) = '@';
@@ -139,7 +144,7 @@ int main(int argc, char const* argv[]) {
     }
 
     {
-        int const id = ids++;
+        int const id = alloc_id();
         set(id, pos)   = (struct pos){3,1};
         set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
         set(id, glyph) = 'i';
