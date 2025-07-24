@@ -14,9 +14,7 @@ void* component_attach(void *data, size_t const size, sparse_set* const meta, in
     if (id >= meta->cap) {
         int const cap = max(id+1, 2*meta->cap);
         meta->ix = realloc(meta->ix, (size_t)cap * sizeof *meta->ix);
-        for (int i = meta->cap; i < cap; i++) {
-            meta->ix[i] = ~0;
-        }
+        memset(meta->ix + meta->cap, ~0, (size_t)(cap - meta->cap) * sizeof *meta->ix);
         meta->cap = cap;
     }
 
