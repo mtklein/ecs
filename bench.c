@@ -35,8 +35,7 @@ static double bench_ascending(int n) {
     for (int i = 0; i < n; i++) {
         vals = component_attach(vals, sizeof *vals, &meta, i);
     }
-    double const elapsed = now() - start;
-    return elapsed;
+    return now() - start;
 }
 
 static double bench_descending(int n) {
@@ -47,8 +46,7 @@ static double bench_descending(int n) {
     for (int i = n-1; i >= 0; i--) {
         vals = component_attach(vals, sizeof *vals, &meta, i);
     }
-    double const elapsed = now() - start;
-    return elapsed;
+    return now() - start;
 }
 
 static double bench_sparse(int n) {
@@ -57,11 +55,9 @@ static double bench_sparse(int n) {
 
     double const start = now();
     for (int i = 0; i < n; i++) {
-        int const id = i * 10;
-        vals = component_attach(vals, sizeof *vals, &meta, id);
+        vals = component_attach(vals, sizeof *vals, &meta, i*10);
     }
-    double const elapsed = now() - start;
-    return elapsed;
+    return now() - start;
 }
 
 static double bench_random(int n) {
@@ -72,11 +68,10 @@ static double bench_random(int n) {
     double const start = now();
     for (int i = 0; i < n; i++) {
         seed = rng(seed);
-        int const id = (int)(seed % (unsigned)(10*n));
+        int const id = (int)(seed % (unsigned)n);
         vals = component_attach(vals, sizeof *vals, &meta, id);
     }
-    double const elapsed = now() - start;
-    return elapsed;
+    return now() - start;
 }
 
 static void run(char const *pattern,
@@ -96,12 +91,14 @@ static void run(char const *pattern,
                 if (min > t) { min = t; }
                 if (max < t) { max = t; }
             }
-            printf("%s%2d %4.1f–%4.1f%s ", lgN==10 ? "N=2^" : "    ", lgN,
-                                           min*1e9/N, max*1e9/N,
-                                           lgN==10 ? "ns" : "  ");
+            printf("%s%2d %5.1f – %5.1f%s ", lgN==10 ? "N=2^" : "    "
+                                           , lgN
+                                           , min*1e9/N
+                                           , max*1e9/N
+                                           , lgN==10 ? "ns" : "  ");
             long i = 0;
-            for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("#"); }
-            for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("."); }
+            for (; i < lrint(min*1e9/N) && i < 80; i++) { printf("●"); }
+            for (; i < lrint(max*1e9/N) && i < 80; i++) { printf("◌"); }
             printf("\n");
             lgN++;
         } while (min < max);
