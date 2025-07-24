@@ -19,11 +19,11 @@ rule link
 rule run
     command = ./$in > $out
 
-build out/aihack.o:   compile aihack.c
-build out/ecs.o:      compile ecs.c
-build out/ecs_test.o: compile ecs_test.c
 
-build out/ecs_test:   link out/ecs_test.o out/ecs.o
+build out/ecs.o:       compile  ecs.c
+build out/ecs_test.o:  compile  ecs_test.c
+build out/ecs_test:    link out/ecs_test.o out/ecs.o
 build out/ecs_test.ok: run  out/ecs_test
 
-build out/aihack: link out/aihack.o out/ecs.o
+build out/aihack.o: compile  aihack.c
+build out/aihack:   link out/aihack.o out/ecs.o
