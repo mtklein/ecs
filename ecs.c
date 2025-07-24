@@ -12,17 +12,17 @@ static _Bool is_pow2_or_zero(int x) {
 
 void* component_attach(void *data, size_t const size, sparse_set* const meta, int const id) {
     if (id >= meta->cap) {
-        int const cap = max(id+1, 2*meta->cap);
-        meta->ix = realloc(meta->ix, (size_t)cap * sizeof *meta->ix);
-        memset(meta->ix + meta->cap, ~0, (size_t)(cap - meta->cap) * sizeof *meta->ix);
-        meta->cap = cap;
+        int const grown = max(id+1, 2*meta->cap);
+        meta->ix = realloc(meta->ix, (size_t)grown * sizeof *meta->ix);
+        memset(meta->ix + meta->cap, ~0, (size_t)(grown - meta->cap) * sizeof *meta->ix);
+        meta->cap = grown;
     }
 
     if (meta->ix[id] < 0) {
         if (is_pow2_or_zero(meta->n)) {
-            int const cap = meta->n ? 2*meta->n : 1;
-            data     = realloc(data    , (size_t)cap * size            );
-            meta->id = realloc(meta->id, (size_t)cap * sizeof *meta->id);
+            int const grown = meta->n ? 2*meta->n : 1;
+            data     = realloc(data    , (size_t)grown * size            );
+            meta->id = realloc(meta->id, (size_t)grown * sizeof *meta->id);
         }
         int const ix = meta->n++;
         meta->id[ix] = id;
