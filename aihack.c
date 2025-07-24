@@ -66,10 +66,9 @@ static void draw(int w, int h) {
 
 static _Bool alive(void) {
     scan(disp, ix,id) {
-        enum disposition const *d = disp+ix;
-        struct stats     const *s = get(id, stats);
+        struct stats const *s = get(id, stats);
         if (s) {
-            if (*d == LEADER && s->hp > 0) {
+            if (disp[ix] == LEADER && s->hp > 0) {
                 return 1;
             }
         }
@@ -100,11 +99,10 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
     scan(pos, ix,id) {
-        struct pos             *p = pos+ix;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER) {
-            int const x = p->x + dx,
-                      y = p->y + dy;
+            int const x = pos[ix].x + dx,
+                      y = pos[ix].y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
                 continue;
             }
@@ -113,8 +111,8 @@ static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx)
             if (found) {
                 combat(id,found, d20,ctx);
             } else {
-                p->x = x;
-                p->y = y;
+                pos[ix].x = x;
+                pos[ix].y = y;
             }
         }
     }
