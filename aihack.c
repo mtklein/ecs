@@ -67,7 +67,7 @@ static void draw(int w, int h) {
 static _Bool alive(void) {
     scan(stats, ix,id) {
         enum disposition const *d = get(id, disp);
-        if (d && disp[ix] == LEADER && stats[ix].hp > 0) {
+        if (d && *d == LEADER && stats[ix].hp > 0) {
             return 1;
         }
     }
