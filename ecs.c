@@ -95,10 +95,10 @@ int component_n(void const *data) {
 
 int component_ix(void const *data, int id) {
     sparse_set const *meta = meta_const(data);
-    return id < meta->cap ? meta->ix[id] : -1;
+    return id < meta->cap ? meta->ix[id] : ~0;
 }
 
 int component_id(void const *data, int ix) {
     sparse_set const *meta = meta_const(data);
-    return ix < meta->n ? meta->id[ix] : -1;
+    return ix < meta->n ? meta->id[ix] : ~0;
 }
