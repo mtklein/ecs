@@ -12,7 +12,8 @@ static sparse_set* meta_mut(void *data) {
 }
 
 static sparse_set const* meta_const(void const *data) {
-    return data ? (void const*)((char const*)data - sizeof(sparse_set)) : NULL;
+    static sparse_set const empty;
+    return data ? (void const*)((char const*)data - sizeof(sparse_set)) : &empty;
 }
 
 static int max(int x, int y) {
@@ -24,7 +25,11 @@ static _Bool is_pow2_or_zero(int x) {
 }
 
 void* component_attach(void *data, size_t size, int id) {
-    sparse_set *meta = data ? meta_mut(data) : calloc(1, sizeof *meta);
+    sparse_set *meta = meta_mut(data);
+    if (!meta) {
+        meta = calloc(1, sizeof *meta);
+    }
+
     if (id >= meta->cap) {
         int const grown = max(id+1, 2*meta->cap);
         meta->ix = realloc(meta->ix, (size_t)grown * sizeof *meta->ix);
@@ -42,8 +47,6 @@ void* component_attach(void *data, size_t size, int id) {
         int const ix = meta->n++;
         meta->id[ix] = id;
         meta->ix[id] = ix;
-    } else {
-        data = (char*)meta + sizeof *meta;
     }
 
     return data;
@@ -55,8 +58,8 @@ void component_detach(void *data, size_t size, int id) {
         int const ix = meta->ix[id];
         if (ix >= 0) {
             int const last = --meta->n;
-            memmove((char*)data + (size_t)ix * size,
-                    (char*)data + (size_t)last * size, size);
+            memmove((char      *)data + (size_t)ix   * size,
+                    (char const*)data + (size_t)last * size, size);
             int const last_id = meta->id[last];
             meta->id[ix] = last_id;
             meta->ix[last_id] = ix;
@@ -67,7 +70,7 @@ void component_detach(void *data, size_t size, int id) {
 
 void* component_lookup(void *data, size_t size, int id) {
     sparse_set const *meta = meta_const(data);
-    if (meta && id < meta->cap) {
+    if (id < meta->cap) {
         int const ix = meta->ix[id];
         if (ix >= 0) {
             return (char*)data + (size_t)ix * size;
@@ -85,22 +88,17 @@ void component_free(void *data) {
     }
 }
 
-int component_count(void const *data) {
+int component_n(void const *data) {
     sparse_set const *meta = meta_const(data);
-    return meta ? meta->n : 0;
+    return meta->n;
 }
 
-int component_capacity(void const *data) {
+int component_ix(void const *data, int id) {
     sparse_set const *meta = meta_const(data);
-    return meta ? meta->cap : 0;
+    return id < meta->cap ? meta->ix[id] : -1;
 }
 
-int component_index(void const *data, int id) {
+int component_id(void const *data, int ix) {
     sparse_set const *meta = meta_const(data);
-    return meta && id < meta->cap ? meta->ix[id] : -1;
-}
-
-int component_id_at(void const *data, int ix) {
-    sparse_set const *meta = meta_const(data);
-    return meta && ix < meta->n ? meta->id[ix] : -1;
+    return ix < meta->n ? meta->id[ix] : -1;
 }
