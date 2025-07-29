@@ -27,7 +27,7 @@ static enum disposition *disp;
 static sparse_set        disp_meta;
 
 #define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
-#define set(id, c) (c=component_attach(c, sizeof *c, &c##_meta, id))[c##_meta.ix[id]]
+#define set(id, c) (*(c=component_attach(c, sizeof *c, &c##_meta, id), c+c##_meta.ix[id]))
 #define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
 
 #define scan(c, p,id) c; for (int id=~0; p != c+c##_meta.n && (id=c##_meta.id[p-c]); p++)
