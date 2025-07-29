@@ -20,7 +20,9 @@ static struct stats {
 
 static char *glyph;
 
-static enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED } *disp;
+static enum disposition {
+    LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
+} *disp;
 
 #define get(id, c)      component_lookup(c, sizeof *c, id)
 #define set(id, c) (*(c=component_attach(c, sizeof *c, id), c+component_ix(c,id)))
