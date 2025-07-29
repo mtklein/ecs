@@ -40,9 +40,9 @@ void* component_attach(void *data, size_t size, int id) {
     if (meta->ix[id] < 0) {
         if (is_pow2_or_zero(meta->n)) {
             int const grown = meta->n ? 2*meta->n : 1;
-            meta = realloc(meta, sizeof *meta + (size_t)grown * size);
+            meta     = realloc(meta    , sizeof *meta + (size_t)grown * size);
+            meta->id = realloc(meta->id,                (size_t)grown * sizeof *meta->id);
             data = (char*)meta + sizeof *meta;
-            meta->id = realloc(meta->id, (size_t)grown * sizeof *meta->id);
         }
         int const ix = meta->n++;
         meta->id[ix] = id;
