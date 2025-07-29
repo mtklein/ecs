@@ -11,26 +11,22 @@ static int alloc_id(void) {
 }
 
 static struct pos {int x,y;} *pos;
-static sparse_set             pos_meta;
 
 struct stats {
     int hp, ac, atk, dmg;
 };
 static struct stats *stats;
-static sparse_set    stats_meta;
 
-static char      *glyph;
-static sparse_set glyph_meta;
+static char *glyph;
 
 enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
 static enum disposition *disp;
-static sparse_set        disp_meta;
 
-#define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
-#define set(id, c) (*(c=component_attach(c, sizeof *c, &c##_meta, id), c+c##_meta.ix[id]))
-#define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
+#define get(id, c)    component_lookup(c, sizeof *c, id)
+#define set(id, c) (*(c=component_attach(c, sizeof *c, id), c+component_index(c,id)))
+#define del(id, c)    component_detach(c, sizeof *c, id)
 
-#define scan(c, p,id) c; for (int id=~0; p != c+c##_meta.n && (id=c##_meta.id[p-c]); p++)
+#define scan(c, p,id) c; for (int id=~0; p!=c+component_count(c) && (id=component_id_at(c,(int)(p-c))); p++)
 
 static int entity_at(int x, int y) {
     struct pos const *p = scan(pos, p,id) {
