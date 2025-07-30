@@ -10,9 +10,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void component_attach_(void *v, size_t size, int id) {
-    component(char) *c = v;
-
+void component_attach_(struct component *c, size_t size, int id) {
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
         c->ix = realloc(c->ix, (size_t)grown * sizeof *c->ix);
@@ -32,15 +30,13 @@ void component_attach_(void *v, size_t size, int id) {
     }
 }
 
-void component_detach_(void *v, size_t size, int id) {
-    component(char) *c = v;
-
+void component_detach_(struct component *c, size_t size, int id) {
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
             int const last = --c->n;
-            memmove(c->data + (size_t)ix   * size,
-                    c->data + (size_t)last * size, size);
+            memmove((char      *)c->data + (size_t)ix   * size,
+                    (char const*)c->data + (size_t)last * size, size);
             int const last_id = c->id[last];
             c->id[ix] = last_id;
             c->ix[last_id] = ix;
@@ -49,13 +45,11 @@ void component_detach_(void *v, size_t size, int id) {
     }
 }
 
-void* component_lookup_(void const *v, size_t size, int id) {
-    component(char) const *c = v;
-
+void* component_lookup_(struct component const *c, size_t size, int id) {
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
-            return c->data + (size_t)ix * size;
+            return (char*)c->data + (size_t)ix * size;
         }
     }
     return NULL;

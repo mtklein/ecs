@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 static void free_component(void *p) {
-    component(void) *c = p;
+    struct component *c = p;
     free(c->data);
     free(c->id);
     free(c->ix);

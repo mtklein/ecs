@@ -18,7 +18,7 @@ static double now(void) {
 }
 
 static void free_component(void *p) {
-    component(void) *c = p;
+    struct component *c = p;
     free(c->data);
     free(c->id);
     free(c->ix);
