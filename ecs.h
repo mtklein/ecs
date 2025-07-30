@@ -1,11 +1,8 @@
 #pragma once
 #include <stddef.h>
 
-typedef struct {
-    int *id,*ix;
-    int   n,cap;
-} sparse_set;
+#define component(T) struct { size_t size; T *data; int *id,*ix; int n,cap; }
 
-void* component_attach(void*, size_t, sparse_set      *, int id);
-void  component_detach(void*, size_t, sparse_set      *, int id);
-void* component_lookup(void*, size_t, sparse_set const*, int id);
+void  component_attach(void       *component, int id);
+void  component_detach(void       *component, int id);
+void* component_lookup(void const *component, int id);

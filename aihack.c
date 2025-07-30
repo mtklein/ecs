@@ -10,32 +10,30 @@ static int alloc_id(void) {
     return next++;
 }
 
-static struct pos {int x,y;} *pos;
-static sparse_set             pos_meta;
-
+struct pos {
+    int x,y;
+};
 struct stats {
     int hp, ac, atk, dmg;
 };
-static struct stats *stats;
-static sparse_set    stats_meta;
+enum disposition {
+    LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
+};
 
-static char      *glyph;
-static sparse_set glyph_meta;
+static component(struct pos)       pos   = {.size=sizeof(struct pos)};
+static component(struct stats)     stats = {.size=sizeof(struct stats)};
+static component(char)             glyph = {.size=sizeof(char)};
+static component(enum disposition) disp  = {.size=sizeof(enum disposition)};
 
-enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
-static enum disposition *disp;
-static sparse_set        disp_meta;
-
-#define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
-#define set(id, c) (*(c=component_attach(c, sizeof *c, &c##_meta, id), c+c##_meta.ix[id]))
-#define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
-
-#define scan(c, p,id) c; for (int id=~0; p != c+c##_meta.n && (id=c##_meta.id[p-c]); p++)
+#define set(id,c) (*(component_attach(&c, id), c.data + c.ix[id]))
+#define get(id,c)    component_lookup(&c, id)
+#define del(id,c)    component_detach(&c, id)
 
 static int entity_at(int x, int y) {
-    struct pos const *p = scan(pos, p,id) {
+    for (int ix = 0; ix < pos.n; ix++) {
+        struct pos const *p = pos.data + ix;
         if (p->x == x && p->y == y) {
-            return id;
+            return pos.id[ix];
         }
     }
     return nil;
@@ -65,7 +63,9 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    struct stats const *s = scan(stats, s,id) {
+    for (int i = 0; i < stats.n; i++) {
+        int id = stats.id[i];
+        struct stats const *s = stats.data + i;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER && s->hp > 0) {
             return 1;
@@ -96,7 +96,9 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    struct pos *p = scan(pos, p,id) {
+    for (int i = 0; i < pos.n; i++) {
+        int id = pos.id[i];
+        struct pos *p = pos.data + i;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER) {
             int const x = p->x + dx,

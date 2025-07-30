@@ -17,59 +17,52 @@ static double now(void) {
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
 
-static void free_ptr(void *p) {
-    free(*(void**)p);
-}
-
-static void free_sparse_set(void *p) {
-    sparse_set *meta = p;
-    free(meta->id);
-    free(meta->ix);
+static void free_component(void *p) {
+    component(void) *c = p;
+    free(c->data);
+    free(c->id);
+    free(c->ix);
 }
 
 static double bench_ascending(int n) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
-        vals = component_attach(vals, sizeof *vals, &meta, i);
+        component_attach(&comp, i);
     }
     return now() - start;
 }
 
 static double bench_descending(int n) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = n-1; i >= 0; i--) {
-        vals = component_attach(vals, sizeof *vals, &meta, i);
+        component_attach(&comp, i);
     }
     return now() - start;
 }
 
 static double bench_sparse(int n) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
-        vals = component_attach(vals, sizeof *vals, &meta, i*10);
+        component_attach(&comp, i*10);
     }
     return now() - start;
 }
 
 static double bench_random(int n) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
     unsigned seed = 1;
 
     double const start = now();
     for (int i = 0; i < n; i++) {
         seed = rng(seed);
         int const id = (int)(seed % (unsigned)n);
-        vals = component_attach(vals, sizeof *vals, &meta, id);
+        component_attach(&comp, id);
     }
     return now() - start;
 }
