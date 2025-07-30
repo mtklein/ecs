@@ -3,15 +3,14 @@
 #include <stdlib.h>
 
 static void free_component(void *p) {
-    struct component *c = p;
+    component(void) *c = p;
     free(c->data);
     free(c->id);
     free(c->ix);
 }
 
 static void test_attach_detach(void) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     // Basic ID attach.
     component_attach(&comp, 1);
@@ -72,8 +71,7 @@ static void test_attach_detach(void) {
 }
 
 static void test_high_id(void) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     component_attach(&comp, 7);
     expect(comp.n   == 1);
@@ -86,8 +84,7 @@ static void test_high_id(void) {
 }
 
 static void test_detach_invalid(void) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     component_attach(&comp, 1);
     expect(comp.n == 1);
@@ -101,8 +98,7 @@ static void test_detach_invalid(void) {
 }
 
 static void test_lookup(void) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     expect(component_lookup(&comp, 1) == NULL);
 

@@ -18,15 +18,14 @@ static double now(void) {
 }
 
 static void free_component(void *p) {
-    struct component *c = p;
+    component(void) *c = p;
     free(c->data);
     free(c->id);
     free(c->ix);
 }
 
 static double bench_ascending(int n) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
@@ -36,8 +35,7 @@ static double bench_ascending(int n) {
 }
 
 static double bench_descending(int n) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = n-1; i >= 0; i--) {
@@ -47,8 +45,7 @@ static double bench_descending(int n) {
 }
 
 static double bench_sparse(int n) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
@@ -58,8 +55,7 @@ static double bench_sparse(int n) {
 }
 
 static double bench_random(int n) {
-    __attribute__((cleanup(free_component))) struct component comp = {0};
-    comp.size = sizeof(int);
+    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
     unsigned seed = 1;
 
     double const start = now();

@@ -10,7 +10,9 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-void* component_attach(struct component *c, int id) {
+void component_attach(void *v, int id) {
+    component(void) *c = v;
+
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
         c->ix = realloc(c->ix, (size_t)grown * sizeof *c->ix);
@@ -28,11 +30,11 @@ void* component_attach(struct component *c, int id) {
         c->id[ix] = id;
         c->ix[id] = ix;
     }
-
-    return (char*)c->data + (size_t)c->ix[id] * c->size;
 }
 
-void component_detach(struct component *c, int id) {
+void component_detach(void *v, int id) {
+    component(void) *c = v;
+
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
@@ -47,7 +49,9 @@ void component_detach(struct component *c, int id) {
     }
 }
 
-void* component_lookup(struct component const *c, int id) {
+void* component_lookup(void const *v, int id) {
+    component(void) const *c = v;
+
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
