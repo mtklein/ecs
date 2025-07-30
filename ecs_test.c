@@ -107,9 +107,9 @@ static void test_lookup(void) {
     comp.data[comp.ix[2]] = 22;
     comp.data[comp.ix[5]] = 55;
 
-    expect(component_lookup(&comp, 2) == (char*)comp.data + (size_t)comp.ix[2]*sizeof(int));
+    expect(component_lookup(&comp, 2) == comp.data + comp.ix[2]);
     expect(*(int*)component_lookup(&comp, 2) == 22);
-    expect(component_lookup(&comp, 5) == (char*)comp.data + (size_t)comp.ix[5]*sizeof(int));
+    expect(component_lookup(&comp, 5) == comp.data + comp.ix[5]);
     expect(*(int*)component_lookup(&comp, 5) == 55);
 
     expect(component_lookup(&comp, 3) == NULL);
