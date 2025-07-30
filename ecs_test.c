@@ -10,7 +10,7 @@ static void free_component(void *p) {
 }
 
 static void test_attach_detach(void) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     // Basic ID attach.
     component_attach(&comp, 1);
@@ -71,7 +71,7 @@ static void test_attach_detach(void) {
 }
 
 static void test_high_id(void) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     component_attach(&comp, 7);
     expect(comp.n   == 1);
@@ -84,7 +84,7 @@ static void test_high_id(void) {
 }
 
 static void test_detach_invalid(void) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     component_attach(&comp, 1);
     expect(comp.n == 1);
@@ -98,7 +98,7 @@ static void test_detach_invalid(void) {
 }
 
 static void test_lookup(void) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     expect(component_lookup(&comp, 1) == NULL);
 

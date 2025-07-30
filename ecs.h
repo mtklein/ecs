@@ -1,8 +1,12 @@
 #pragma once
 #include <stddef.h>
 
-#define component(T) struct { size_t size; T *data; int *id,*ix; int n,cap; }
+#define component(T) struct { T *data; int *id,*ix; int n,cap; }
 
-void  component_attach(void       *component, int id);
-void  component_detach(void       *component, int id);
-void* component_lookup(void const *component, int id);
+#define component_attach(c,id) component_attach_(c, sizeof *(c)->data, id)
+#define component_detach(c,id) component_detach_(c, sizeof *(c)->data, id)
+#define component_lookup(c,id) component_lookup_(c, sizeof *(c)->data, id)
+
+void  component_attach_(void       *component, size_t, int id);
+void  component_detach_(void       *component, size_t, int id);
+void* component_lookup_(void const *component, size_t, int id);

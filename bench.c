@@ -25,7 +25,7 @@ static void free_component(void *p) {
 }
 
 static double bench_ascending(int n) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
@@ -35,7 +35,7 @@ static double bench_ascending(int n) {
 }
 
 static double bench_descending(int n) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     double const start = now();
     for (int i = n-1; i >= 0; i--) {
@@ -45,7 +45,7 @@ static double bench_descending(int n) {
 }
 
 static double bench_sparse(int n) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     double const start = now();
     for (int i = 0; i < n; i++) {
@@ -55,7 +55,7 @@ static double bench_sparse(int n) {
 }
 
 static double bench_random(int n) {
-    __attribute__((cleanup(free_component))) component(int) comp = {.size=sizeof(int)};
+    __attribute__((cleanup(free_component))) component(int) comp = {0};
     unsigned seed = 1;
 
     double const start = now();

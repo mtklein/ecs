@@ -17,10 +17,10 @@ enum disposition {
     LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
 };
 
-static component(struct pos)       pos   = {.size=sizeof(struct pos)};
-static component(struct stats)     stats = {.size=sizeof(struct stats)};
-static component(char)             glyph = {.size=sizeof(char)};
-static component(enum disposition) disp  = {.size=sizeof(enum disposition)};
+static component(struct pos)       pos;
+static component(struct stats)     stats;
+static component(char)             glyph;
+static component(enum disposition) disp;
 
 #define set(id,c) (*(component_attach(&c, id), c.data + c.ix[id]))
 #define get(id,c)    component_lookup(&c, id)
