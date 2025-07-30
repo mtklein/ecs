@@ -38,8 +38,8 @@ static double bench_descending(int n) {
     __attribute__((cleanup(free_component))) component(int) comp = {0};
 
     double const start = now();
-    for (int i = n-1; i >= 0; i--) {
-        component_attach(&comp, i);
+    while (n --> 0) {
+        component_attach(&comp, n);
     }
     return now() - start;
 }
