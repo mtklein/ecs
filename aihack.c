@@ -28,9 +28,10 @@ static component(enum disposition) disp  = {.size=sizeof(enum disposition)};
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
+        int        const id = pos.id[ix];
         struct pos const *p = pos.data + ix;
         if (p->x == x && p->y == y) {
-            return pos.id[ix];
+            return id;
         }
     }
     return nil;
@@ -60,9 +61,9 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    for (int i = 0; i < stats.n; i++) {
-        int id = stats.id[i];
-        struct stats const *s = stats.data + i;
+    for (int ix = 0; ix < stats.n; ix++) {
+        int              const id = stats.id[ix];
+        struct stats     const *s = stats.data + ix;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER && s->hp > 0) {
             return 1;
@@ -93,9 +94,9 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    for (int i = 0; i < pos.n; i++) {
-        int id = pos.id[i];
-        struct pos *p = pos.data + i;
+    for (int ix = 0; ix < pos.n; ix++) {
+        int              const id = pos.id[ix];
+        struct pos             *p = pos.data + ix;
         enum disposition const *d = get(id, disp);
         if (d && *d == LEADER) {
             int const x = p->x + dx,
