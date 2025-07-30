@@ -18,7 +18,7 @@ static void test_attach_detach(void) {
     expect(comp.cap == 2);
     expect(comp.ix[1] == 0);
     expect(comp.id[0] == 1);
-    ((int*)comp.data)[comp.ix[1]] = 11;
+    comp.data[comp.ix[1]] = 11;
 
     // Re-attaching the same ID does nothing.
     void *prev = comp.data;
@@ -33,7 +33,7 @@ static void test_attach_detach(void) {
     expect(comp.cap == 2);
     expect(comp.ix[0] == 1);
     expect(comp.id[1] == 0);
-    ((int*)comp.data)[comp.ix[0]] = 22;
+    comp.data[comp.ix[0]] = 22;
 
     // Attach a higher ID, everything grows.
     component_attach(&comp, 5);
@@ -41,7 +41,7 @@ static void test_attach_detach(void) {
     expect(comp.cap == 6);
     expect(comp.ix[5] == 2);
     expect(comp.id[2] == 5);
-    ((int*)comp.data)[comp.ix[5]] = 55;
+    comp.data[comp.ix[5]] = 55;
 
     // Detach an unattached ID does nothing.
     component_detach(&comp, 3);
@@ -54,7 +54,7 @@ static void test_attach_detach(void) {
     expect(comp.ix[0] == ~0);
     expect(comp.ix[5] == 1);
     expect(comp.id[1] == 5);
-    expect(((int*)comp.data)[1] == 55);
+    expect(comp.data[1] == 55);
 
     // Keep detatching, another swap.
     component_detach(&comp, 1);
@@ -62,7 +62,7 @@ static void test_attach_detach(void) {
     expect(comp.ix[1] == ~0);
     expect(comp.id[0] == 5);
     expect(comp.ix[5] == 0);
-    expect(((int*)comp.data)[0] == 55);
+    expect(comp.data[0] == 55);
 
     // Detach the last ID.
     component_detach(&comp, 5);
@@ -104,8 +104,8 @@ static void test_lookup(void) {
 
     component_attach(&comp, 2);
     component_attach(&comp, 5);
-    ((int*)comp.data)[comp.ix[2]] = 22;
-    ((int*)comp.data)[comp.ix[5]] = 55;
+    comp.data[comp.ix[2]] = 22;
+    comp.data[comp.ix[5]] = 55;
 
     expect(component_lookup(&comp, 2) == (char*)comp.data + (size_t)comp.ix[2]*sizeof(int));
     expect(*(int*)component_lookup(&comp, 2) == 22);
