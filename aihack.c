@@ -22,9 +22,9 @@ static component(struct stats)     stats;
 static component(char)             glyph;
 static component(enum disposition) disp;
 
-#define set(id,c) (*(component_attach(&c, id), c.data + c.ix[id]))
-#define get(id,c)    component_lookup(&c, id)
-#define del(id,c)    component_detach(&c, id)
+#define set(id,c) (*component_attach(&c, id))
+#define get(id,c)   component_lookup(&c, id)
+#define del(id,c)   component_detach(&c, id)
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
