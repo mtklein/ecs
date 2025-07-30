@@ -11,7 +11,7 @@ static _Bool is_pow2_or_zero(int x) {
 }
 
 void component_attach(void *v, int id) {
-    component(void) *c = v;
+    component(char) *c = v;
 
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
@@ -33,14 +33,14 @@ void component_attach(void *v, int id) {
 }
 
 void component_detach(void *v, int id) {
-    component(void) *c = v;
+    component(char) *c = v;
 
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
             int const last = --c->n;
-            memmove((char      *)c->data + (size_t)ix   * c->size,
-                    (char const*)c->data + (size_t)last * c->size, c->size);
+            memmove(c->data + (size_t)ix   * c->size,
+                    c->data + (size_t)last * c->size, c->size);
             int const last_id = c->id[last];
             c->id[ix] = last_id;
             c->ix[last_id] = ix;
@@ -50,12 +50,12 @@ void component_detach(void *v, int id) {
 }
 
 void* component_lookup(void const *v, int id) {
-    component(void) const *c = v;
+    component(char) const *c = v;
 
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
-            return (char*)c->data + (size_t)ix * c->size;
+            return c->data + (size_t)ix * c->size;
         }
     }
     return NULL;
