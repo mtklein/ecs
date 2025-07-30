@@ -12,7 +12,8 @@ struct component {
 #define component_attach(c,id) \
        (__typeof__((c)->data)) component_attach_(&(c)->type_erased, sizeof *(c)->data, id)
 #define component_detach(c,id) component_detach_(&(c)->type_erased, sizeof *(c)->data, id)
-#define component_lookup(c,id) component_lookup_(&(c)->type_erased, sizeof *(c)->data, id)
+#define component_lookup(c,id) \
+       (__typeof__((c)->data)) component_lookup_(&(c)->type_erased, sizeof *(c)->data, id)
 
 void* component_attach_(struct component      *, size_t, int id);
 void  component_detach_(struct component      *, size_t, int id);
