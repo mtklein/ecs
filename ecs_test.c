@@ -2,131 +2,128 @@
 #include "test.h"
 #include <stdlib.h>
 
-static void free_ptr(void *p) {
-    free(*(void**)p);
-}
-
-static void free_sparse_set(void *p) {
-    sparse_set *meta = p;
-    free(meta->id);
-    free(meta->ix);
+static void free_component(void *p) {
+    struct component *c = p;
+    free(c->data);
+    free(c->id);
+    free(c->ix);
 }
 
 static void test_attach_detach(void) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) struct component comp = {0};
+    comp.size = sizeof(int);
 
     // Basic ID attach.
-    vals = component_attach(vals, sizeof *vals, &meta, 1);
-    expect(meta.n   == 1);
-    expect(meta.cap == 2);
-    expect(meta.ix[1] == 0);
-    expect(meta.id[0] == 1);
-    vals[meta.ix[1]] = 11;
+    component_attach(&comp, 1);
+    expect(comp.n   == 1);
+    expect(comp.cap == 2);
+    expect(comp.ix[1] == 0);
+    expect(comp.id[0] == 1);
+    ((int*)comp.data)[comp.ix[1]] = 11;
 
     // Re-attaching the same ID does nothing.
-    int* const prev = vals;
-    vals = component_attach(vals, sizeof *vals, &meta, 1);
-    expect(vals == prev);
-    expect(meta.n == 1);
+    void *prev = comp.data;
+    component_attach(&comp, 1);
+    expect(comp.data == prev);
+    expect(comp.n == 1);
 
     // Attach a lower ID, no need to resize ix, but will resize id,vals.
-    vals = component_attach(vals, sizeof *vals, &meta, 0);
-    expect(vals != prev);
-    expect(meta.n   == 2);
-    expect(meta.cap == 2);
-    expect(meta.ix[0] == 1);
-    expect(meta.id[1] == 0);
-    vals[meta.ix[0]] = 22;
+    component_attach(&comp, 0);
+    expect(comp.data != prev);
+    expect(comp.n   == 2);
+    expect(comp.cap == 2);
+    expect(comp.ix[0] == 1);
+    expect(comp.id[1] == 0);
+    ((int*)comp.data)[comp.ix[0]] = 22;
 
     // Attach a higher ID, everything grows.
-    vals = component_attach(vals, sizeof *vals, &meta, 5);
-    expect(meta.n   == 3);
-    expect(meta.cap == 6);
-    expect(meta.ix[5] == 2);
-    expect(meta.id[2] == 5);
-    vals[meta.ix[5]] = 55;
+    component_attach(&comp, 5);
+    expect(comp.n   == 3);
+    expect(comp.cap == 6);
+    expect(comp.ix[5] == 2);
+    expect(comp.id[2] == 5);
+    ((int*)comp.data)[comp.ix[5]] = 55;
 
     // Detach an unattached ID does nothing.
-    component_detach(vals, sizeof *vals, &meta, 3);
-    expect(meta.n == 3);
+    component_detach(&comp, 3);
+    expect(comp.n == 3);
 
     // Detach an attached ID, swapping the last ID into its place.
-    expect(meta.ix[0] == 1);
-    component_detach(vals, sizeof *vals, &meta, 0);
-    expect(meta.n == 2);
-    expect(meta.ix[0] == ~0);
-    expect(meta.ix[5] == 1);
-    expect(meta.id[1] == 5);
-    expect(vals[1] == 55);
+    expect(comp.ix[0] == 1);
+    component_detach(&comp, 0);
+    expect(comp.n == 2);
+    expect(comp.ix[0] == ~0);
+    expect(comp.ix[5] == 1);
+    expect(comp.id[1] == 5);
+    expect(((int*)comp.data)[1] == 55);
 
     // Keep detatching, another swap.
-    component_detach(vals, sizeof *vals, &meta, 1);
-    expect(meta.n == 1);
-    expect(meta.ix[1] == ~0);
-    expect(meta.id[0] == 5);
-    expect(meta.ix[5] == 0);
-    expect(vals[0] == 55);
+    component_detach(&comp, 1);
+    expect(comp.n == 1);
+    expect(comp.ix[1] == ~0);
+    expect(comp.id[0] == 5);
+    expect(comp.ix[5] == 0);
+    expect(((int*)comp.data)[0] == 55);
 
     // Detach the last ID.
-    component_detach(vals, sizeof *vals, &meta, 5);
-    expect(meta.n == 0);
-    expect(meta.ix[5] == ~0);
+    component_detach(&comp, 5);
+    expect(comp.n == 0);
+    expect(comp.ix[5] == ~0);
 }
 
 static void test_high_id(void) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) struct component comp = {0};
+    comp.size = sizeof(int);
 
-    vals = component_attach(vals, sizeof *vals, &meta, 7);
-    expect(meta.n   == 1);
-    expect(meta.cap == 8);
-    expect(meta.ix[7] == 0);
-    expect(meta.id[0] == 7);
+    component_attach(&comp, 7);
+    expect(comp.n   == 1);
+    expect(comp.cap == 8);
+    expect(comp.ix[7] == 0);
+    expect(comp.id[0] == 7);
 
-    component_detach(vals, sizeof *vals, &meta, 7);
-    expect(meta.n == 0);
+    component_detach(&comp, 7);
+    expect(comp.n == 0);
 }
 
 static void test_detach_invalid(void) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) struct component comp = {0};
+    comp.size = sizeof(int);
 
-    vals = component_attach(vals, sizeof *vals, &meta, 1);
-    expect(meta.n == 1);
-    component_detach(vals, sizeof *vals, &meta, 3);
-    expect(meta.n == 1);
+    component_attach(&comp, 1);
+    expect(comp.n == 1);
+    component_detach(&comp, 3);
+    expect(comp.n == 1);
 
-    component_detach(vals, sizeof *vals, &meta, 1);
-    expect(meta.n == 0);
-    component_detach(vals, sizeof *vals, &meta, 1);
-    expect(meta.n == 0);
+    component_detach(&comp, 1);
+    expect(comp.n == 0);
+    component_detach(&comp, 1);
+    expect(comp.n == 0);
 }
 
 static void test_lookup(void) {
-    __attribute__((cleanup(free_ptr)))        int       *vals = NULL;
-    __attribute__((cleanup(free_sparse_set))) sparse_set meta = {0};
+    __attribute__((cleanup(free_component))) struct component comp = {0};
+    comp.size = sizeof(int);
 
-    expect(component_lookup(vals, sizeof *vals, &meta, 1) == NULL);
+    expect(component_lookup(&comp, 1) == NULL);
 
-    vals = component_attach(vals, sizeof *vals, &meta, 2);
-    vals = component_attach(vals, sizeof *vals, &meta, 5);
-    vals[meta.ix[2]] = 22;
-    vals[meta.ix[5]] = 55;
+    component_attach(&comp, 2);
+    component_attach(&comp, 5);
+    ((int*)comp.data)[comp.ix[2]] = 22;
+    ((int*)comp.data)[comp.ix[5]] = 55;
 
-    expect(component_lookup(vals, sizeof *vals, &meta, 2) == vals + meta.ix[2]);
-    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 2) == 22);
-    expect(component_lookup(vals, sizeof *vals, &meta, 5) == vals + meta.ix[5]);
-    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 5) == 55);
+    expect(component_lookup(&comp, 2) == (char*)comp.data + (size_t)comp.ix[2]*sizeof(int));
+    expect(*(int*)component_lookup(&comp, 2) == 22);
+    expect(component_lookup(&comp, 5) == (char*)comp.data + (size_t)comp.ix[5]*sizeof(int));
+    expect(*(int*)component_lookup(&comp, 5) == 55);
 
-    expect(component_lookup(vals, sizeof *vals, &meta, 3) == NULL);
+    expect(component_lookup(&comp, 3) == NULL);
 
-    component_detach(vals, sizeof *vals, &meta, 2);
-    expect(component_lookup(vals, sizeof *vals, &meta, 2) == NULL);
-    expect(*(int*)component_lookup(vals, sizeof *vals, &meta, 5) == 55);
+    component_detach(&comp, 2);
+    expect(component_lookup(&comp, 2) == NULL);
+    expect(*(int*)component_lookup(&comp, 5) == 55);
 
-    component_detach(vals, sizeof *vals, &meta, 5);
-    expect(component_lookup(vals, sizeof *vals, &meta, 5) == NULL);
+    component_detach(&comp, 5);
+    expect(component_lookup(&comp, 5) == NULL);
 }
 
 int main(void) {

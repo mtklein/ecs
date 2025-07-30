@@ -10,32 +10,28 @@ static int alloc_id(void) {
     return next++;
 }
 
-static struct pos {int x,y;} *pos;
-static sparse_set             pos_meta;
+struct pos {int x,y;};
+#define component(T) union { T *data; struct component meta; }
+
+static component(struct pos) pos = {.meta.size = sizeof(struct pos)};
 
 struct stats {
     int hp, ac, atk, dmg;
 };
-static struct stats *stats;
-static sparse_set    stats_meta;
+static component(struct stats) stats = {.meta.size = sizeof(struct stats)};
 
-static char      *glyph;
-static sparse_set glyph_meta;
+static component(char) glyph = {.meta.size = sizeof(char)};
 
 enum disposition { LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED };
-static enum disposition *disp;
-static sparse_set        disp_meta;
+static component(enum disposition) disp = {.meta.size = sizeof(enum disposition)};
 
-#define get(id, c)    component_lookup(c, sizeof *c, &c##_meta, id)
-#define set(id, c) (*(c=component_attach(c, sizeof *c, &c##_meta, id), c+c##_meta.ix[id]))
-#define del(id, c)    component_detach(c, sizeof *c, &c##_meta, id)
-
-#define scan(c, p,id) c; for (int id=~0; p != c+c##_meta.n && (id=c##_meta.id[p-c]); p++)
+#define set(id,c) component_attach(&(c).meta, id)
 
 static int entity_at(int x, int y) {
-    struct pos const *p = scan(pos, p,id) {
+    for (int i = 0; i < pos.meta.n; i++) {
+        struct pos const *p = pos.data + i;
         if (p->x == x && p->y == y) {
-            return id;
+            return pos.meta.id[i];
         }
     }
     return nil;
@@ -55,8 +51,8 @@ static void draw(int w, int h) {
                 [MADDENED] = "\033[35m",
             };
 
-            enum disposition const *d = get(id, disp);
-            char             const *g = get(id, glyph);
+            enum disposition const *d = component_lookup(&disp.meta, id);
+            char             const *g = component_lookup(&glyph.meta, id);
             printf("%s%c", d ? color[*d] : "\033[0m"
                          , g ?       *g  : '.');
         }
@@ -65,8 +61,10 @@ static void draw(int w, int h) {
 }
 
 static _Bool alive(void) {
-    struct stats const *s = scan(stats, s,id) {
-        enum disposition const *d = get(id, disp);
+    for (int i = 0; i < stats.meta.n; i++) {
+        int id = stats.meta.id[i];
+        struct stats const *s = stats.data + i;
+        enum disposition const *d = component_lookup(&disp.meta, id);
         if (d && *d == LEADER && s->hp > 0) {
             return 1;
         }
@@ -75,29 +73,31 @@ static _Bool alive(void) {
 }
 
 static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
-    struct stats const *as = get(attacker, stats);
-    struct stats       *ds = get(defender, stats);
+    struct stats const *as = component_lookup(&stats.meta, attacker);
+    struct stats       *ds = component_lookup(&stats.meta, defender);
     if (as && ds) {
         int const roll = d20(ctx);
         if (roll > 1) {
             if (roll == 20 || roll + as->atk >= ds->ac) {
                 ds->hp -= as->dmg;
                 if (ds->hp <= 0) {
-                    set(defender, glyph) = 'x';
-                    del(defender, stats);
-                    del(defender, disp);
+                    *(char*)component_attach(&glyph.meta, defender) = 'x';
+                    component_detach(&stats.meta, defender);
+                    component_detach(&disp.meta, defender);
                 }
             }
         }
     } else if (as && !ds) {
-        del(defender, pos);
-        del(defender, glyph);
+        component_detach(&pos.meta, defender);
+        component_detach(&glyph.meta, defender);
     }
 }
 
 static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
-    struct pos *p = scan(pos, p,id) {
-        enum disposition const *d = get(id, disp);
+    for (int i = 0; i < pos.meta.n; i++) {
+        int id = pos.meta.id[i];
+        struct pos *p = pos.data + i;
+        enum disposition const *d = component_lookup(&disp.meta, id);
         if (d && *d == LEADER) {
             int const x = p->x + dx,
                       y = p->y + dy;
@@ -148,18 +148,18 @@ int main(int argc, char const* argv[]) {
 
     {
         int const id = alloc_id();
-        set(id, pos)   = (struct pos){1,1};
-        set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
-        set(id, glyph) = '@';
-        set(id, disp)  = LEADER;
+        *(struct pos*)set(id, pos)   = (struct pos){1,1};
+        *(struct stats*)set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
+        *(char*)set(id, glyph) = '@';
+        *(enum disposition*)set(id, disp)  = LEADER;
     }
     {
         int const id = alloc_id();
-        set(id, pos).x = 3;
-        set(id, pos).y = 1;
-        set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
-        set(id, glyph) = 'i';
-        set(id, disp)  = HOSTILE;
+        ((struct pos*)set(id, pos))->x = 3;
+        ((struct pos*)set(id, pos))->y = 1;
+        *(struct stats*)set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
+        *(char*)set(id, glyph) = 'i';
+        *(enum disposition*)set(id, disp)  = HOSTILE;
     }
 
     while (alive()) {
