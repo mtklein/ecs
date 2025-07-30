@@ -4,11 +4,8 @@
 #include <termios.h>
 #include <unistd.h>
 
-static int const nil = 0;
-static int alloc_id(void) {
-    static int next = 1;
-    return next++;
-}
+static int const nil     = 0;
+static int       next_id = 1;
 
 struct pos {
     int x,y;
@@ -149,14 +146,14 @@ int main(int argc, char const* argv[]) {
 
 
     {
-        int const id = alloc_id();
+        int const id = next_id++;
         set(id, pos)   = (struct pos){1,1};
         set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
         set(id, glyph) = '@';
         set(id, disp)  = LEADER;
     }
     {
-        int const id = alloc_id();
+        int const id = next_id++;
         set(id, pos).x = 3;
         set(id, pos).y = 1;
         set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
