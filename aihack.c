@@ -36,24 +36,25 @@ struct key_event {
     int key;
 };
 
-struct config_event {
+struct attack_event {
+    int attacker, defender;
+};
+
+struct config_change {
     enum game_state *game_state;
     int (*d20)(void *rng);
     void *rng;
 };
 
-struct attack_event {
-    int attacker, defender;
-};
-
-struct resize_event {
+struct size_change {
     int w,h;
 };
 
 static component(struct    key_event)    key_event;
-static component(struct config_event) config_event;
 static component(struct attack_event) attack_event;
-static component(struct resize_event) resize_event;
+
+static component(struct   size_change)   size_change;
+static component(struct config_change) config_change;
 
 
 #define set(id,c) (*component_attach(&c, id))
@@ -117,7 +118,7 @@ static void game_state(int event) {
     static enum game_state *game_state;
 
     {
-        struct config_event const *e = get(event, config_event);
+        struct config_change const *e = get(event, config_change);
         if (e) {
             game_state = e->game_state;
         }
@@ -127,6 +128,7 @@ static void game_state(int event) {
         struct key_event const *e = get(event, key_event);
         if (e && e->key == 'q') {
             *game_state = QUIT;
+            del(event, key_event);
         }
     }
 
@@ -144,7 +146,7 @@ static void movement(int event) {
     static int w,h;
 
     {
-        struct resize_event const *e = get(event, resize_event);
+        struct size_change const *e = get(event, size_change);
         if (e) {
             w = e->w;
             h = e->h;
@@ -156,11 +158,13 @@ static void movement(int event) {
         if (e) {
             int dx=0, dy=0;
             switch (e->key) {
+                default: return;
                 case 'h': dx=-1; break;
                 case 'j': dy=+1; break;
                 case 'k': dy=-1; break;
                 case 'l': dx=+1; break;
             }
+            del(event, key_event);
 
             struct attack_event a = try_move(dx,dy, w,h);
             if (a.defender) {
@@ -175,7 +179,7 @@ static void combat_system(int event) {
     static void *rng;
 
     {
-        struct config_event const *e = get(event, config_event);
+        struct config_change const *e = get(event, config_change);
         if (e) {
             d20 = e->d20;
             rng = e->rng;
@@ -212,7 +216,7 @@ static void draw_system(int event) {
     static int w,h;
 
     {
-        struct resize_event const *e = get(event, resize_event);
+        struct size_change const *e = get(event, size_change);
         if (e) {
             w = e->w;
             h = e->h;
@@ -297,20 +301,18 @@ int main(int argc, char const* argv[]) {
 
     {
         int const event = events++;
-        set(event, config_event) = (struct config_event){&game_state,d20,&seed};
-        set(event, resize_event) = (struct resize_event){w,h};
+        set(event, config_change) = (struct config_change){&game_state,d20,&seed};
+        set(event,   size_change) = (struct   size_change){w,h};
 
         drain_events(system, len(system));
-        del(event, config_event);
-        del(event, resize_event);
+        del(event, config_change);
+        del(event,   size_change);
     }
 
     while (game_state == RUNNING) {
         int const event = events++;
         set(event, key_event).key = getchar();
-
         drain_events(system, len(system));
-        del(event, key_event);
     }
     return game_state == DIED ? 1 : 0;
 }
