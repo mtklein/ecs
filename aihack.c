@@ -41,19 +41,15 @@ struct attack_event {
 };
 
 struct config_change {
+    int w,h;
     enum game_state *game_state;
     int (*d20)(void *rng);
     void *rng;
 };
 
-struct size_change {
-    int w,h;
-};
-
 static component(struct    key_event)    key_event;
 static component(struct attack_event) attack_event;
 
-static component(struct   size_change)   size_change;
 static component(struct config_change) config_change;
 
 
@@ -146,7 +142,7 @@ static void movement(int event) {
     static int w,h;
 
     {
-        struct size_change const *e = get(event, size_change);
+        struct config_change const *e = get(event, config_change);
         if (e) {
             w = e->w;
             h = e->h;
@@ -216,7 +212,7 @@ static void draw_system(int event) {
     static int w,h;
 
     {
-        struct size_change const *e = get(event, size_change);
+        struct config_change const *e = get(event, config_change);
         if (e) {
             w = e->w;
             h = e->h;
@@ -301,12 +297,10 @@ int main(int argc, char const* argv[]) {
 
     {
         int const event = events++;
-        set(event, config_change) = (struct config_change){&game_state,d20,&seed};
-        set(event,   size_change) = (struct   size_change){w,h};
+        set(event, config_change) = (struct config_change){w,h,&game_state,d20,&seed};
 
         drain_events(system, len(system));
         del(event, config_change);
-        del(event,   size_change);
     }
 
     while (game_state == RUNNING) {
