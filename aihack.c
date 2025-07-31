@@ -6,8 +6,10 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: add redraw event to let us turn draw() into a system
 // TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
+// TODO: come up with mechanism and/or convention to distinguish events which delete themselves
+//       when handled and broadcast events that should be deleted only after drain_events()
+// TODO: come up with a mechanism for systems to register which components they monitor for changes?
 
 static int const nil     = 0;
 static int       next_id = 1;
@@ -38,18 +40,23 @@ struct config_event {
     void *rng;
 };
 
-struct resize_event {
-    int w,h;
-};
-
 struct attack_event {
     int attacker, defender;
 };
 
+struct resize_event {
+    int w,h;
+};
+
+struct redraw_event {
+    char unused;
+};
+
 static component(struct    key_event)    key_event;
 static component(struct config_event) config_event;
-static component(struct resize_event) resize_event;
 static component(struct attack_event) attack_event;
+static component(struct resize_event) resize_event;
+static component(struct redraw_event) redraw_event;
 
 
 #define set(id,c) (*component_attach(&c, id))
@@ -69,30 +76,6 @@ static int entity_at(int x, int y) {
         }
     }
     return nil;
-}
-
-static void draw(int w, int h) {
-    printf("\033[H");
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int const id = entity_at(x,y);
-
-            static char const *color[] = {
-                [LEADER]   = "\033[32m",
-                [PARTY]    = "\033[32m",
-                [FRIENDLY] = "\033[34m",
-                [NEUTRAL]  = "\033[33m",
-                [HOSTILE]  = "\033[31m",
-                [MADDENED] = "\033[35m",
-            };
-
-            enum disposition const *d = get(id, disp);
-            char             const *g = get(id, glyph);
-            printf("%s%c", d ? color[*d] : "\033[0m"
-                         , g ?       *g  : '.');
-        }
-        printf("\n");
-    }
 }
 
 static _Bool alive(void) {
@@ -129,6 +112,7 @@ static struct attack_event try_move(int dx, int dy, int w, int h) {
                 p->x = x;
                 p->y = y;
             }
+            set(events++, redraw_event);
         }
     }
     return result;
@@ -187,8 +171,7 @@ static void movement(int event) {
 
             struct attack_event a = try_move(dx,dy, w,h);
             if (a.defender) {
-                int const id = events++;
-                set(id, attack_event) = a;
+                set(events++, attack_event) = a;
             }
         }
     }
@@ -220,14 +203,57 @@ static void combat_system(int event) {
                             set(e->defender, glyph) = 'x';
                             del(e->defender, stats);
                             del(e->defender, disp);
+                            set(events++, redraw_event);
                         }
                     }
                 }
             } else if (as && !ds) {
                 del(e->defender, pos);
                 del(e->defender, glyph);
+                set(events++, redraw_event);
             }
             del(event, attack_event);
+        }
+    }
+}
+
+static void draw_system(int event) {
+    static int w,h;
+
+    {
+        struct resize_event const *e = get(event, resize_event);
+        if (e) {
+            w = e->w;
+            h = e->h;
+        }
+    }
+
+    {
+        struct redraw_event const *e = get(event, redraw_event);
+        if (e) {
+            del(event, redraw_event);
+
+            printf("\033[H");
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int const id = entity_at(x,y);
+
+                    static char const *color[] = {
+                        [LEADER]   = "\033[32m",
+                        [PARTY]    = "\033[32m",
+                        [FRIENDLY] = "\033[34m",
+                        [NEUTRAL]  = "\033[33m",
+                        [HOSTILE]  = "\033[31m",
+                        [MADDENED] = "\033[35m",
+                    };
+
+                    enum disposition const *d = get(id, disp);
+                    char             const *g = get(id, glyph);
+                    printf("%s%c", d ? color[*d] : "\033[0m"
+                                 , g ?       *g  : '.');
+                }
+                printf("\n");
+            }
         }
     }
 }
@@ -280,6 +306,7 @@ int main(int argc, char const* argv[]) {
         {.fn=game_state},
         {.fn=movement},
         {.fn=combat_system},
+        {.fn=draw_system},
     };
 
     _Bool running = 1;
@@ -288,16 +315,18 @@ int main(int argc, char const* argv[]) {
         int const event = events++;
         set(event, config_event) = (struct config_event){&running,d20,&seed};
         set(event, resize_event) = (struct resize_event){w,h};
+        set(event, redraw_event);
+
         drain_events(system, len(system));
         del(event, config_event);
         del(event, resize_event);
     }
 
     while (running && alive()) {
-        draw(w,h);
-
         int const event = events++;
-        set(event, key_event).key = getchar();
+        set(event,    key_event).key = getchar();
+        set(event, redraw_event);
+
         drain_events(system, len(system));
         del(event, key_event);
     }
