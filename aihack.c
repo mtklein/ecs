@@ -6,7 +6,6 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
 // TODO: come up with mechanism and/or convention to distinguish events which delete themselves
 //       when handled and broadcast events that should be deleted only after drain_events()
 // TODO: come up with a mechanism for systems to register which components they monitor for changes?
@@ -25,6 +24,10 @@ enum disposition {
     LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
 };
 
+enum run_state {
+    RUNNING, DIED, QUIT
+};
+
 static component(struct pos)       pos;
 static component(struct stats)     stats;
 static component(char)             glyph;
@@ -35,7 +38,7 @@ struct key_event {
 };
 
 struct config_event {
-    _Bool *running;
+    enum run_state *running;
     int (*d20)(void *rng);
     void *rng;
 };
@@ -130,7 +133,7 @@ static int d20(void *ctx) {
 }
 
 static void game_state(int event) {
-    static _Bool *running;
+    static enum run_state *running;
 
     {
         struct config_event const *e = get(event, config_event);
@@ -142,8 +145,12 @@ static void game_state(int event) {
     {
         struct key_event const *e = get(event, key_event);
         if (e && e->key == 'q') {
-            *running = 0;
+            *running = QUIT;
         }
+    }
+
+    if (alive() == 0) {
+        *running = DIED;
     }
 }
 
@@ -309,7 +316,7 @@ int main(int argc, char const* argv[]) {
         {.fn=draw_system},
     };
 
-    _Bool running = 1;
+    enum run_state running = RUNNING;
 
     {
         int const event = events++;
@@ -322,7 +329,7 @@ int main(int argc, char const* argv[]) {
         del(event, resize_event);
     }
 
-    while (running && alive()) {
+    while (running == RUNNING) {
         int const event = events++;
         set(event,    key_event).key = getchar();
         set(event, redraw_event);
@@ -330,5 +337,5 @@ int main(int argc, char const* argv[]) {
         drain_events(system, len(system));
         del(event, key_event);
     }
-    return running ? 1 : 0;
+    return running == DIED ? 1 : 0;
 }
