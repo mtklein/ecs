@@ -6,6 +6,7 @@
 
 static int const nil     = 0;
 static int       next_id = 1;
+static int       events;
 
 struct pos {
     int x,y;
@@ -22,9 +23,34 @@ static component(struct stats)     stats;
 static component(char)             glyph;
 static component(enum disposition) disp;
 
+struct key_event { int key; };
+struct config_event { _Bool *running; int (*d20)(void *rng); void *rng; };
+struct attack_event { int attacker, defender; };
+
+static component(struct key_event)    key_event;
+static component(struct config_event) config_event;
+static component(struct attack_event) attack_event;
+
+#define len(a) ((int)(sizeof(a)/sizeof*(a)))
+
 #define set(id,c) (*component_attach(&c, id))
 #define get(id,c)   component_lookup(&c, id)
 #define del(id,c)   component_detach(&c, id)
+
+struct system {
+    void* (*fn)(int event, void *state);
+    void                        *state;
+};
+
+static void drain_events(struct system *system, int systems) {
+    for (int event = 0; event < events; event++) {
+        for (int i = 0; i < systems; i++) {
+            system[i].state = system[i].fn(event, system[i].state);
+        }
+    }
+    events = 0;
+}
+
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
@@ -72,7 +98,7 @@ static _Bool alive(void) {
     return 0;
 }
 
-static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
+static void fight(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
     struct stats const *as = get(attacker, stats);
     struct stats       *ds = get(defender, stats);
     if (as && ds) {
@@ -93,7 +119,8 @@ static void combat(int attacker, int defender, int (*d20)(void *ctx), void *ctx)
     }
 }
 
-static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx) {
+static struct attack_event try_move(int dx, int dy, int w, int h) {
+    struct attack_event result = {0};
     for (int ix = 0; ix < pos.n; ix++) {
         int              const id = pos.id[ix];
         struct pos             *p = pos.data + ix;
@@ -102,18 +129,21 @@ static void move(int dx, int dy, int w, int h, int (*d20)(void *ctx), void *ctx)
             int const x = p->x + dx,
                       y = p->y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
-                continue;
+                break;
             }
 
             int const found = entity_at(x,y);
             if (found) {
-                combat(id,found, d20,ctx);
+                result.attacker = id;
+                result.defender = found;
+                break;
             } else {
                 p->x = x;
                 p->y = y;
             }
         }
     }
+    return result;
 }
 
 static unsigned rng(unsigned seed) {
@@ -125,6 +155,101 @@ static int d20(void *ctx) {
     unsigned *seed = ctx;
     *seed = rng(*seed);
     return 1 + (int)(*seed % 20);
+}
+
+static void* game_state(int event, void *ctx) {
+    struct {
+        _Bool *running;
+    } *state = ctx;
+    if (!state) {
+        state = calloc(1, sizeof *state);
+    }
+
+    {
+        struct config_event const *e = get(event, config_event);
+        if (e) {
+            state->running = e->running;
+        }
+    }
+
+    {
+        struct key_event const *e = get(event, key_event);
+        if (e && e->key == 'q' && state->running) {
+            *state->running = 0;
+        }
+    }
+
+    return state;
+}
+
+static void* movement(int event, void *ctx) {
+    struct {
+        int   w,h;
+        int (*d20)(void *rng);
+        void *rng;
+    } *state = ctx;
+    if (!state) {
+        state = calloc(1, sizeof *state);
+        state->w = 10;
+        state->h = 5;
+    }
+
+    {
+        struct config_event const *e = get(event, config_event);
+        if (e) {
+            state->d20 = e->d20;
+            state->rng = e->rng;
+        }
+    }
+
+    {
+        struct key_event const *e = get(event, key_event);
+        if (e) {
+            int dx=0, dy=0;
+            switch (e->key) {
+                case 'h': dx=-1; break;
+                case 'j': dy=+1; break;
+                case 'k': dy=-1; break;
+                case 'l': dx=+1; break;
+            }
+
+            struct attack_event a = try_move(dx,dy, state->w,state->h);
+            if (a.defender) {
+                int const id = events++;
+                set(id, attack_event) = a;
+            }
+        }
+    }
+
+    return state;
+}
+
+static void* combat_system(int event, void *ctx) {
+    struct {
+        int (*d20)(void *rng);
+        void *rng;
+    } *state = ctx;
+    if (!state) {
+        state = calloc(1, sizeof *state);
+    }
+
+    {
+        struct config_event const *e = get(event, config_event);
+        if (e) {
+            state->d20 = e->d20;
+            state->rng = e->rng;
+        }
+    }
+
+    {
+        struct attack_event const *e = get(event, attack_event);
+        if (e) {
+            fight(e->attacker,e->defender, state->d20,state->rng);
+            del(event, attack_event);
+        }
+    }
+
+    return state;
 }
 
 static void reset_terminal(void) {
@@ -145,7 +270,6 @@ int main(int argc, char const* argv[]) {
     printf("\033[?25l");
     atexit(reset_terminal);
 
-
     {
         int const id = next_id++;
         set(id, pos)   = (struct pos){1,1};
@@ -162,18 +286,29 @@ int main(int argc, char const* argv[]) {
         set(id, disp)  = HOSTILE;
     }
 
-    while (alive()) {
+    struct system system[] = {
+        {.fn=game_state},
+        {.fn=movement},
+        {.fn=combat_system},
+    };
+
+    _Bool running = 1;
+
+    {
+        int const event = events++;
+        set(event, config_event) = (struct config_event){&running,d20,&seed};
+        drain_events(system, len(system));
+        del(event, config_event);
+    }
+
+    while (running && alive()) {
         printf("\033[H");
         draw(w,h);
 
-        switch (getchar()) {
-            case 'q': return 0;
-
-            case 'h': move(-1,0,w,h, d20,&seed); break;
-            case 'j': move(0,+1,w,h, d20,&seed); break;
-            case 'k': move(0,-1,w,h, d20,&seed); break;
-            case 'l': move(+1,0,w,h, d20,&seed); break;
-        }
+        int const event = events++;
+        set(event, key_event).key = getchar();
+        drain_events(system, len(system));
+        del(event, key_event);
     }
-    return 1;
+    return running ? 1 : 0;
 }
