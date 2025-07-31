@@ -6,9 +6,6 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: come up with mechanism and/or convention to distinguish events which delete themselves
-//       when handled and broadcast events that should be deleted only after drain_events()
-
 static int const nil     = 0;
 static int       next_id = 1;
 static int       events;
@@ -56,10 +53,6 @@ static component(struct config_change) config_change;
 #define set(id,c) (*component_attach(&c, id))
 #define get(id,c)   component_lookup(&c, id)
 #define del(id,c)   component_detach(&c, id)
-
-struct system {
-    void (*fn)(int event);
-};
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
@@ -110,7 +103,7 @@ static int d20(void *ctx) {
     return 1 + (int)(*seed % 20);
 }
 
-static void game_state(int event) {
+static void game_state_system(int event) {
     static enum game_state *game_state;
 
     {
@@ -138,7 +131,7 @@ static void game_state(int event) {
     }
 }
 
-static void movement(int event) {
+static void movement_system(int event) {
     static int w,h;
 
     {
@@ -243,10 +236,10 @@ static void draw_system(int event) {
 }
 
 
-static void drain_events(struct system *system, int systems) {
+static void drain_events(void (*system[])(int), int systems) {
     for (int event = 0; event < events; event++) {
         for (int i = 0; i < systems; i++) {
-            system[i].fn(event);
+            system[i](event);
         }
     }
     events = 0;
@@ -286,11 +279,11 @@ int main(int argc, char const* argv[]) {
         set(id, disp)  = HOSTILE;
     }
 
-    struct system system[] = {
-        {.fn=game_state},
-        {.fn=movement},
-        {.fn=combat_system},
-        {.fn=draw_system},
+    void (*system[])(int) = {
+        game_state_system,
+          movement_system,
+            combat_system,
+              draw_system,
     };
 
     enum game_state game_state = RUNNING;
