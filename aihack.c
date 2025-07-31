@@ -24,7 +24,7 @@ enum disposition {
     LEADER, PARTY, FRIENDLY, NEUTRAL, HOSTILE, MADDENED
 };
 
-enum run_state {
+enum game_state {
     RUNNING, DIED, QUIT
 };
 
@@ -38,7 +38,7 @@ struct key_event {
 };
 
 struct config_event {
-    enum run_state *running;
+    enum game_state *game_state;
     int (*d20)(void *rng);
     void *rng;
 };
@@ -81,18 +81,6 @@ static int entity_at(int x, int y) {
     return nil;
 }
 
-static _Bool alive(void) {
-    for (int ix = 0; ix < stats.n; ix++) {
-        int              const id = stats.id[ix];
-        struct stats     const *s = stats.data + ix;
-        enum disposition const *d = get(id, disp);
-        if (d && *d == LEADER && s->hp > 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 static struct attack_event try_move(int dx, int dy, int w, int h) {
     struct attack_event result = {0};
     for (int ix = 0; ix < pos.n; ix++) {
@@ -133,24 +121,29 @@ static int d20(void *ctx) {
 }
 
 static void game_state(int event) {
-    static enum run_state *running;
+    static enum game_state *game_state;
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            running = e->running;
+            game_state = e->game_state;
         }
     }
 
     {
         struct key_event const *e = get(event, key_event);
         if (e && e->key == 'q') {
-            *running = QUIT;
+            *game_state = QUIT;
         }
     }
 
-    if (alive() == 0) {
-        *running = DIED;
+    for (int ix = 0; ix < stats.n; ix++) {
+        int              const id = stats.id[ix];
+        struct stats     const *s = stats.data + ix;
+        enum disposition const *d = get(id, disp);
+        if (d && *d == LEADER && s->hp <= 0) {
+            *game_state = DIED;
+        }
     }
 }
 
@@ -316,11 +309,11 @@ int main(int argc, char const* argv[]) {
         {.fn=draw_system},
     };
 
-    enum run_state running = RUNNING;
+    enum game_state game_state = RUNNING;
 
     {
         int const event = events++;
-        set(event, config_event) = (struct config_event){&running,d20,&seed};
+        set(event, config_event) = (struct config_event){&game_state,d20,&seed};
         set(event, resize_event) = (struct resize_event){w,h};
         set(event, redraw_event);
 
@@ -329,7 +322,7 @@ int main(int argc, char const* argv[]) {
         del(event, resize_event);
     }
 
-    while (running == RUNNING) {
+    while (game_state == RUNNING) {
         int const event = events++;
         set(event,    key_event).key = getchar();
         set(event, redraw_event);
@@ -337,5 +330,5 @@ int main(int argc, char const* argv[]) {
         drain_events(system, len(system));
         del(event, key_event);
     }
-    return running == DIED ? 1 : 0;
+    return game_state == DIED ? 1 : 0;
 }
