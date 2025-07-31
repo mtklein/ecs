@@ -6,7 +6,6 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: simplify by making system state static to the system function
 // TODO: add resize event for communicating w/h through to systems that need it
 // TODO: add redraw event to let us turn draw() into a system
 // TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
@@ -54,8 +53,7 @@ static component(struct attack_event) attack_event;
 #define del(id,c)   component_detach(&c, id)
 
 struct system {
-    void* (*fn)(int event, void *state);
-    void                        *state;
+    void (*fn)(int event);
 };
 
 static int entity_at(int x, int y) {
@@ -143,49 +141,38 @@ static int d20(void *ctx) {
     return 1 + (int)(*seed % 20);
 }
 
-static void* game_state(int event, void *ctx) {
-    struct {
+static void game_state(int event) {
+    static struct {
         _Bool *running;
-    } *state = ctx;
-
-    if (!state) {
-        state = calloc(1, sizeof *state);
-    }
+    } state;
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            state->running = e->running;
+            state.running = e->running;
         }
     }
 
     {
         struct key_event const *e = get(event, key_event);
-        if (e && e->key == 'q' && state->running) {
-            *state->running = 0;
+        if (e && e->key == 'q' && state.running) {
+            *state.running = 0;
         }
     }
-
-    return state;
 }
 
-static void* movement(int event, void *ctx) {
-    struct {
+static void movement(int event) {
+    static struct {
         int   w,h;
         int (*d20)(void *rng);
         void *rng;
-    } *state = ctx;
-    if (!state) {
-        state = calloc(1, sizeof *state);
-        state->w = 10;
-        state->h = 5;
-    }
+    } state = {.w=10, .h=5};
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            state->d20 = e->d20;
-            state->rng = e->rng;
+            state.d20 = e->d20;
+            state.rng = e->rng;
         }
     }
 
@@ -200,32 +187,26 @@ static void* movement(int event, void *ctx) {
                 case 'l': dx=+1; break;
             }
 
-            struct attack_event a = try_move(dx,dy, state->w,state->h);
+            struct attack_event a = try_move(dx,dy, state.w,state.h);
             if (a.defender) {
                 int const id = events++;
                 set(id, attack_event) = a;
             }
         }
     }
-
-    return state;
 }
 
-static void* combat_system(int event, void *ctx) {
-    struct {
+static void combat_system(int event) {
+    static struct {
         int (*d20)(void *rng);
         void *rng;
-    } *state = ctx;
-
-    if (!state) {
-        state = calloc(1, sizeof *state);
-    }
+    } state;
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            state->d20 = e->d20;
-            state->rng = e->rng;
+            state.d20 = e->d20;
+            state.rng = e->rng;
         }
     }
 
@@ -235,7 +216,7 @@ static void* combat_system(int event, void *ctx) {
             struct stats const *as = get(e->attacker, stats);
             struct stats       *ds = get(e->defender, stats);
             if (as && ds) {
-                int const roll = d20(ctx);
+                int const roll = state.d20(state.rng);
                 if (roll > 1) {
                     if (roll == 20 || roll + as->atk >= ds->ac) {
                         ds->hp -= as->dmg;
@@ -253,15 +234,13 @@ static void* combat_system(int event, void *ctx) {
             del(event, attack_event);
         }
     }
-
-    return state;
 }
 
 
 static void drain_events(struct system *system, int systems) {
     for (int event = 0; event < events; event++) {
         for (int i = 0; i < systems; i++) {
-            system[i].state = system[i].fn(event, system[i].state);
+            system[i].fn(event);
         }
     }
     events = 0;
