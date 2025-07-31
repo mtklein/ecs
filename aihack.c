@@ -7,6 +7,9 @@
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
 // TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
+// TODO: come up with mechanism and/or convention to distinguish events which delete themselves
+//       when handled and broadcast events that should be deleted only after drain_events()
+// TODO: come up with a mechanism for systems to register which components they monitor for changes?
 
 static int const nil     = 0;
 static int       next_id = 1;
