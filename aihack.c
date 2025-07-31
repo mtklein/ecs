@@ -6,7 +6,6 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: add resize event for communicating w/h through to systems that need it
 // TODO: add redraw event to let us turn draw() into a system
 // TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
 
@@ -39,12 +38,17 @@ struct config_event {
     void *rng;
 };
 
+struct resize_event {
+    int w,h;
+};
+
 struct attack_event {
     int attacker, defender;
 };
 
 static component(struct    key_event)    key_event;
 static component(struct config_event) config_event;
+static component(struct resize_event) resize_event;
 static component(struct attack_event) attack_event;
 
 
@@ -163,6 +167,14 @@ static void movement(int event) {
     static int w = 10, h = 5;
 
     {
+        struct resize_event const *e = get(event, resize_event);
+        if (e) {
+            w = e->w;
+            h = e->h;
+        }
+    }
+
+    {
         struct key_event const *e = get(event, key_event);
         if (e) {
             int dx=0, dy=0;
@@ -275,8 +287,10 @@ int main(int argc, char const* argv[]) {
     {
         int const event = events++;
         set(event, config_event) = (struct config_event){&running,d20,&seed};
+        set(event, resize_event) = (struct resize_event){w,h};
         drain_events(system, len(system));
         del(event, config_event);
+        del(event, resize_event);
     }
 
     while (running && alive()) {
