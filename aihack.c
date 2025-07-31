@@ -6,7 +6,6 @@
 
 #define len(x) (int)(sizeof(x) / sizeof *(x))
 
-// TODO: add redraw event to let us turn draw() into a system
 // TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
 
 static int const nil     = 0;
@@ -46,10 +45,15 @@ struct attack_event {
     int attacker, defender;
 };
 
+struct redraw_event {
+    int w,h;
+};
+
 static component(struct    key_event)    key_event;
 static component(struct config_event) config_event;
 static component(struct resize_event) resize_event;
 static component(struct attack_event) attack_event;
+static component(struct redraw_event) redraw_event;
 
 
 #define set(id,c) (*component_attach(&c, id))
@@ -232,6 +236,14 @@ static void combat_system(int event) {
     }
 }
 
+static void draw_system(int event) {
+    struct redraw_event const *e = get(event, redraw_event);
+    if (e) {
+        draw(e->w, e->h);
+        del(event, redraw_event);
+    }
+}
+
 
 static void drain_events(struct system *system, int systems) {
     for (int event = 0; event < events; event++) {
@@ -280,6 +292,7 @@ int main(int argc, char const* argv[]) {
         {.fn=game_state},
         {.fn=movement},
         {.fn=combat_system},
+        {.fn=draw_system},
     };
 
     _Bool running = 1;
@@ -288,13 +301,16 @@ int main(int argc, char const* argv[]) {
         int const event = events++;
         set(event, config_event) = (struct config_event){&running,d20,&seed};
         set(event, resize_event) = (struct resize_event){w,h};
+        set(event, redraw_event) = (struct redraw_event){w,h};
         drain_events(system, len(system));
         del(event, config_event);
         del(event, resize_event);
     }
 
     while (running && alive()) {
-        draw(w,h);
+        int const draw_id = events++;
+        set(draw_id, redraw_event) = (struct redraw_event){w,h};
+        drain_events(system, len(system));
 
         int const event = events++;
         set(event, key_event).key = getchar();
