@@ -37,7 +37,7 @@ struct attack_event {
     int attacker, defender;
 };
 
-struct config_change {
+struct config_event {
     int w,h;
     enum game_state *game_state;
     int (*d20)(void *rng);
@@ -46,13 +46,24 @@ struct config_change {
 
 static component(struct    key_event)    key_event;
 static component(struct attack_event) attack_event;
-
-static component(struct config_change) config_change;
-
+static component(struct config_event) config_event;
 
 #define set(id,c) (*component_attach(&c, id))
 #define get(id,c)   component_lookup(&c, id)
 #define del(id,c)   component_detach(&c, id)
+
+struct recycle {
+    struct component *component;
+    size_t            size;
+};
+static component(struct recycle) recycle;
+
+static void* queue_event_(struct component *c, size_t size) {
+    int const event = events++;
+    set(event, recycle) = (struct recycle){c,size};
+    return component_attach_(c, size, event);
+}
+#define queue_event(c) (*(__typeof__(c.data))queue_event_(&c.type_erased, sizeof *c.data))
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
@@ -107,7 +118,7 @@ static void game_state_system(int event) {
     static enum game_state *game_state;
 
     {
-        struct config_change const *e = get(event, config_change);
+        struct config_event const *e = get(event, config_event);
         if (e) {
             game_state = e->game_state;
         }
@@ -117,7 +128,6 @@ static void game_state_system(int event) {
         struct key_event const *e = get(event, key_event);
         if (e && e->key == 'q') {
             *game_state = QUIT;
-            del(event, key_event);
         }
     }
 
@@ -135,7 +145,7 @@ static void movement_system(int event) {
     static int w,h;
 
     {
-        struct config_change const *e = get(event, config_change);
+        struct config_event const *e = get(event, config_event);
         if (e) {
             w = e->w;
             h = e->h;
@@ -153,11 +163,10 @@ static void movement_system(int event) {
                 case 'k': dy=-1; break;
                 case 'l': dx=+1; break;
             }
-            del(event, key_event);
 
             struct attack_event a = try_move(dx,dy, w,h);
             if (a.defender) {
-                set(events++, attack_event) = a;
+                queue_event(attack_event) = a;
             }
         }
     }
@@ -168,7 +177,7 @@ static void combat_system(int event) {
     static void *rng;
 
     {
-        struct config_change const *e = get(event, config_change);
+        struct config_event const *e = get(event, config_event);
         if (e) {
             d20 = e->d20;
             rng = e->rng;
@@ -196,7 +205,6 @@ static void combat_system(int event) {
                 del(e->defender, pos);
                 del(e->defender, glyph);
             }
-            del(event, attack_event);
         }
     }
 }
@@ -205,7 +213,7 @@ static void draw_system(int event) {
     static int w,h;
 
     {
-        struct config_change const *e = get(event, config_change);
+        struct config_event const *e = get(event, config_event);
         if (e) {
             w = e->w;
             h = e->h;
@@ -235,12 +243,15 @@ static void draw_system(int event) {
     }
 }
 
-
 static void drain_events(void (*system[])(int), int systems) {
     for (int event = 0; event < events; event++) {
         for (int i = 0; i < systems; i++) {
             system[i](event);
         }
+
+        struct recycle *r = get(event, recycle);
+        component_detach_(r->component, r->size, event);
+        del(event, recycle);
     }
     events = 0;
 }
@@ -289,16 +300,12 @@ int main(int argc, char const* argv[]) {
     enum game_state game_state = RUNNING;
 
     {
-        int const event = events++;
-        set(event, config_change) = (struct config_change){w,h,&game_state,d20,&seed};
-
+        queue_event(config_event) = (struct config_event){w,h,&game_state,d20,&seed};
         drain_events(system, len(system));
-        del(event, config_change);
     }
 
     while (game_state == RUNNING) {
-        int const event = events++;
-        set(event, key_event).key = getchar();
+        queue_event(key_event).key = getchar();
         drain_events(system, len(system));
     }
     return game_state == DIED ? 1 : 0;
