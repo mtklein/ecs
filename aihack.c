@@ -142,39 +142,25 @@ static int d20(void *ctx) {
 }
 
 static void game_state(int event) {
-    static struct {
-        _Bool *running;
-    } state;
+    static _Bool *running;
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            state.running = e->running;
+            running = e->running;
         }
     }
 
     {
         struct key_event const *e = get(event, key_event);
-        if (e && e->key == 'q' && state.running) {
-            *state.running = 0;
+        if (e && e->key == 'q') {
+            *running = 0;
         }
     }
 }
 
 static void movement(int event) {
-    static struct {
-        int   w,h;
-        int (*d20)(void *rng);
-        void *rng;
-    } state = {.w=10, .h=5};
-
-    {
-        struct config_event const *e = get(event, config_event);
-        if (e) {
-            state.d20 = e->d20;
-            state.rng = e->rng;
-        }
-    }
+    static int w = 10, h = 5;
 
     {
         struct key_event const *e = get(event, key_event);
@@ -187,7 +173,7 @@ static void movement(int event) {
                 case 'l': dx=+1; break;
             }
 
-            struct attack_event a = try_move(dx,dy, state.w,state.h);
+            struct attack_event a = try_move(dx,dy, w,h);
             if (a.defender) {
                 int const id = events++;
                 set(id, attack_event) = a;
@@ -197,16 +183,14 @@ static void movement(int event) {
 }
 
 static void combat_system(int event) {
-    static struct {
-        int (*d20)(void *rng);
-        void *rng;
-    } state;
+    static int (*d20)(void *rng);
+    static void *rng;
 
     {
         struct config_event const *e = get(event, config_event);
         if (e) {
-            state.d20 = e->d20;
-            state.rng = e->rng;
+            d20 = e->d20;
+            rng = e->rng;
         }
     }
 
@@ -216,7 +200,7 @@ static void combat_system(int event) {
             struct stats const *as = get(e->attacker, stats);
             struct stats       *ds = get(e->defender, stats);
             if (as && ds) {
-                int const roll = state.d20(state.rng);
+                int const roll = d20(rng);
                 if (roll > 1) {
                     if (roll == 20 || roll + as->atk >= ds->ac) {
                         ds->hp -= as->dmg;
