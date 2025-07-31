@@ -41,13 +41,18 @@ struct attack_event {
     int attacker, defender;
 };
 
-struct redraw_event {
+struct resize_event {
     int w,h;
+};
+
+struct redraw_event {
+    char unused;
 };
 
 static component(struct    key_event)    key_event;
 static component(struct config_event) config_event;
 static component(struct attack_event) attack_event;
+static component(struct resize_event) resize_event;
 static component(struct redraw_event) redraw_event;
 
 
@@ -104,6 +109,7 @@ static struct attack_event try_move(int dx, int dy, int w, int h) {
                 p->x = x;
                 p->y = y;
             }
+            set(events++, redraw_event);
         }
     }
     return result;
@@ -142,7 +148,7 @@ static void movement(int event) {
     static int w,h;
 
     {
-        struct redraw_event const *e = get(event, redraw_event);
+        struct resize_event const *e = get(event, resize_event);
         if (e) {
             w = e->w;
             h = e->h;
@@ -162,8 +168,7 @@ static void movement(int event) {
 
             struct attack_event a = try_move(dx,dy, w,h);
             if (a.defender) {
-                int const id = events++;
-                set(id, attack_event) = a;
+                set(events++, attack_event) = a;
             }
         }
     }
@@ -195,12 +200,14 @@ static void combat_system(int event) {
                             set(e->defender, glyph) = 'x';
                             del(e->defender, stats);
                             del(e->defender, disp);
+                            set(events++, redraw_event);
                         }
                     }
                 }
             } else if (as && !ds) {
                 del(e->defender, pos);
                 del(e->defender, glyph);
+                set(events++, redraw_event);
             }
             del(event, attack_event);
         }
@@ -208,28 +215,42 @@ static void combat_system(int event) {
 }
 
 static void draw_system(int event) {
-    struct redraw_event const *e = get(event, redraw_event);
-    if (e) {
-        printf("\033[H");
-        for (int y = 0; y < e->h; y++) {
-            for (int x = 0; x < e->w; x++) {
-                int const id = entity_at(x,y);
+    static int w,h;
 
-                static char const *color[] = {
-                    [LEADER]   = "\033[32m",
-                    [PARTY]    = "\033[32m",
-                    [FRIENDLY] = "\033[34m",
-                    [NEUTRAL]  = "\033[33m",
-                    [HOSTILE]  = "\033[31m",
-                    [MADDENED] = "\033[35m",
-                };
+    {
+        struct resize_event const *e = get(event, resize_event);
+        if (e) {
+            w = e->w;
+            h = e->h;
+        }
+    }
 
-                enum disposition const *d = get(id, disp);
-                char             const *g = get(id, glyph);
-                printf("%s%c", d ? color[*d] : "\033[0m"
-                             , g ?       *g  : '.');
+    {
+        struct redraw_event const *e = get(event, redraw_event);
+        if (e) {
+            del(event, redraw_event);
+
+            printf("\033[H");
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    int const id = entity_at(x,y);
+
+                    static char const *color[] = {
+                        [LEADER]   = "\033[32m",
+                        [PARTY]    = "\033[32m",
+                        [FRIENDLY] = "\033[34m",
+                        [NEUTRAL]  = "\033[33m",
+                        [HOSTILE]  = "\033[31m",
+                        [MADDENED] = "\033[35m",
+                    };
+
+                    enum disposition const *d = get(id, disp);
+                    char             const *g = get(id, glyph);
+                    printf("%s%c", d ? color[*d] : "\033[0m"
+                                 , g ?       *g  : '.');
+                }
+                printf("\n");
             }
-            printf("\n");
         }
     }
 }
@@ -290,19 +311,19 @@ int main(int argc, char const* argv[]) {
     {
         int const event = events++;
         set(event, config_event) = (struct config_event){&running,d20,&seed};
-        set(event, redraw_event) = (struct redraw_event){w,h};
+        set(event, resize_event) = (struct resize_event){w,h};
+        set(event, redraw_event);
+
         drain_events(system, len(system));
         del(event, config_event);
-        del(event, redraw_event);
+        del(event, resize_event);
     }
 
     while (running && alive()) {
-        int const draw_id = events++;
-        set(draw_id, redraw_event) = (struct redraw_event){w,h};
-        drain_events(system, len(system));
-
         int const event = events++;
-        set(event, key_event).key = getchar();
+        set(event,    key_event).key = getchar();
+        set(event, redraw_event);
+
         drain_events(system, len(system));
         del(event, key_event);
     }
