@@ -164,7 +164,7 @@ static void game_state(int event) {
 }
 
 static void movement(int event) {
-    static int w = 10, h = 5;
+    static int w,h;
 
     {
         struct resize_event const *e = get(event, resize_event);
