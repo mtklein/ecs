@@ -4,6 +4,13 @@
 #include <termios.h>
 #include <unistd.h>
 
+#define len(x) (int)(sizeof(x) / sizeof *(x))
+
+// TODO: simplify by making system state static to the system function
+// TODO: add resize event for communicating w/h through to systems that need it
+// TODO: add redraw event to let us turn draw() into a system
+// TODO: turn running into a tristate RUNNING, DIED, QUIT and incorporate alive() into game_state
+
 static int const nil     = 0;
 static int       next_id = 1;
 static int       events;
@@ -23,15 +30,24 @@ static component(struct stats)     stats;
 static component(char)             glyph;
 static component(enum disposition) disp;
 
-struct key_event { int key; };
-struct config_event { _Bool *running; int (*d20)(void *rng); void *rng; };
-struct attack_event { int attacker, defender; };
+struct key_event {
+    int key;
+};
 
-static component(struct key_event)    key_event;
+struct config_event {
+    _Bool *running;
+    int (*d20)(void *rng);
+    void *rng;
+};
+
+struct attack_event {
+    int attacker, defender;
+};
+
+static component(struct    key_event)    key_event;
 static component(struct config_event) config_event;
 static component(struct attack_event) attack_event;
 
-#define len(a) ((int)(sizeof(a)/sizeof*(a)))
 
 #define set(id,c) (*component_attach(&c, id))
 #define get(id,c)   component_lookup(&c, id)
@@ -41,16 +57,6 @@ struct system {
     void* (*fn)(int event, void *state);
     void                        *state;
 };
-
-static void drain_events(struct system *system, int systems) {
-    for (int event = 0; event < events; event++) {
-        for (int i = 0; i < systems; i++) {
-            system[i].state = system[i].fn(event, system[i].state);
-        }
-    }
-    events = 0;
-}
-
 
 static int entity_at(int x, int y) {
     for (int ix = 0; ix < pos.n; ix++) {
@@ -64,6 +70,7 @@ static int entity_at(int x, int y) {
 }
 
 static void draw(int w, int h) {
+    printf("\033[H");
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             int const id = entity_at(x,y);
@@ -96,27 +103,6 @@ static _Bool alive(void) {
         }
     }
     return 0;
-}
-
-static void fight(int attacker, int defender, int (*d20)(void *ctx), void *ctx) {
-    struct stats const *as = get(attacker, stats);
-    struct stats       *ds = get(defender, stats);
-    if (as && ds) {
-        int const roll = d20(ctx);
-        if (roll > 1) {
-            if (roll == 20 || roll + as->atk >= ds->ac) {
-                ds->hp -= as->dmg;
-                if (ds->hp <= 0) {
-                    set(defender, glyph) = 'x';
-                    del(defender, stats);
-                    del(defender, disp);
-                }
-            }
-        }
-    } else if (as && !ds) {
-        del(defender, pos);
-        del(defender, glyph);
-    }
 }
 
 static struct attack_event try_move(int dx, int dy, int w, int h) {
@@ -161,6 +147,7 @@ static void* game_state(int event, void *ctx) {
     struct {
         _Bool *running;
     } *state = ctx;
+
     if (!state) {
         state = calloc(1, sizeof *state);
     }
@@ -229,6 +216,7 @@ static void* combat_system(int event, void *ctx) {
         int (*d20)(void *rng);
         void *rng;
     } *state = ctx;
+
     if (!state) {
         state = calloc(1, sizeof *state);
     }
@@ -244,12 +232,39 @@ static void* combat_system(int event, void *ctx) {
     {
         struct attack_event const *e = get(event, attack_event);
         if (e) {
-            fight(e->attacker,e->defender, state->d20,state->rng);
+            struct stats const *as = get(e->attacker, stats);
+            struct stats       *ds = get(e->defender, stats);
+            if (as && ds) {
+                int const roll = d20(ctx);
+                if (roll > 1) {
+                    if (roll == 20 || roll + as->atk >= ds->ac) {
+                        ds->hp -= as->dmg;
+                        if (ds->hp <= 0) {
+                            set(e->defender, glyph) = 'x';
+                            del(e->defender, stats);
+                            del(e->defender, disp);
+                        }
+                    }
+                }
+            } else if (as && !ds) {
+                del(e->defender, pos);
+                del(e->defender, glyph);
+            }
             del(event, attack_event);
         }
     }
 
     return state;
+}
+
+
+static void drain_events(struct system *system, int systems) {
+    for (int event = 0; event < events; event++) {
+        for (int i = 0; i < systems; i++) {
+            system[i].state = system[i].fn(event, system[i].state);
+        }
+    }
+    events = 0;
 }
 
 static void reset_terminal(void) {
@@ -302,7 +317,6 @@ int main(int argc, char const* argv[]) {
     }
 
     while (running && alive()) {
-        printf("\033[H");
         draw(w,h);
 
         int const event = events++;
