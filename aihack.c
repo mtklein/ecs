@@ -28,6 +28,7 @@ static component(struct pos)       pos;
 static component(struct stats)     stats;
 static component(char)             glyph;
 static component(enum disposition) disp;
+static component(char const*)      name;
 
 struct key_event {
     int key;
@@ -195,15 +196,26 @@ static void combat_system(int event) {
                     if (roll == 20 || roll + as->atk >= ds->ac) {
                         ds->hp -= as->dmg;
                         if (ds->hp <= 0) {
-                            set(e->defender, glyph) = 'x';
+                            struct pos *dp = get(e->defender, pos);
+                            int const corpse = next_id++;
+                            if (dp) {
+                                set(corpse, pos) = *dp;
+                                del(e->defender, pos);
+                            }
+                            set(corpse, glyph) = 'x';
+                            char const **dn = get(e->defender, name);
+                            if (dn) { set(corpse, name) = *dn; }
+                            del(e->defender, glyph);
                             del(e->defender, stats);
                             del(e->defender, disp);
+                            set(e->defender, recycle) = (struct recycle){0};
                         }
                     }
                 }
             } else if (as && !ds) {
                 del(e->defender, pos);
                 del(e->defender, glyph);
+                del(e->defender, name);
             }
         }
     }
@@ -241,6 +253,15 @@ static void draw_system(int event) {
         }
         printf("\n");
     }
+
+    struct attack_event const *a = get(event, attack_event);
+    if (a) {
+        char const **an = get(a->attacker, name);
+        char const **dn = get(a->defender, name);
+        if (an && dn) {
+            printf("%s attacks %s\n", *an, *dn);
+        }
+    }
 }
 
 static void drain_events(void (*system[])(int), int systems) {
@@ -254,6 +275,21 @@ static void drain_events(void (*system[])(int), int systems) {
         del(event, recycle);
     }
     events = 0;
+
+    for (int ix = 0; ix < recycle.n; ) {
+        int              id = recycle.id[ix];
+        struct recycle  *r  = recycle.data + ix;
+        if (!r->component) {
+            del(id, name);
+            del(id, pos);
+            del(id, glyph);
+            del(id, stats);
+            del(id, disp);
+            del(id, recycle);
+        } else {
+            ix++;
+        }
+    }
 }
 
 static void reset_terminal(void) {
@@ -280,6 +316,7 @@ int main(int argc, char const* argv[]) {
         set(id, stats) = (struct stats){.hp=10, .ac=10, .atk=2, .dmg=4};
         set(id, glyph) = '@';
         set(id, disp)  = LEADER;
+        set(id, name)  = "hero";
     }
     {
         int const id = next_id++;
@@ -288,6 +325,7 @@ int main(int argc, char const* argv[]) {
         set(id, stats) = (struct stats){.hp=4, .ac=12, .atk=3, .dmg=2};
         set(id, glyph) = 'i';
         set(id, disp)  = HOSTILE;
+        set(id, name)  = "imp";
     }
 
     void (*system[])(int) = {
