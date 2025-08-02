@@ -196,15 +196,18 @@ static void combat_system(int event) {
                     if (roll == 20 || roll + as->atk >= ds->ac) {
                         ds->hp -= as->dmg;
                         if (ds->hp <= 0) {
-                            struct pos *dp = get(e->defender, pos);
+                            struct pos       *dp = get(e->defender, pos);
+                            struct pos        p;
+                            char const      **dn = get(e->defender, name);
+                            char const       *n = dn ? *dn : NULL;
                             int const corpse = next_id++;
                             if (dp) {
-                                set(corpse, pos) = *dp;
+                                p = *dp;
+                                set(corpse, pos) = p;
                                 del(e->defender, pos);
                             }
                             set(corpse, glyph) = 'x';
-                            char const **dn = get(e->defender, name);
-                            if (dn) { set(corpse, name) = *dn; }
+                            if (n) { set(corpse, name) = n; }
                             del(e->defender, glyph);
                             del(e->defender, stats);
                             del(e->defender, disp);
