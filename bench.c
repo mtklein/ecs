@@ -18,10 +18,7 @@ static double now(void) {
 }
 
 static void free_component(void *p) {
-    struct component *c = p;
-    free(c->data);
-    free(c->id);
-    free(c->ix);
+    component_free_((struct component*)p);
 }
 
 static double bench_ascending(int n) {

@@ -3,10 +3,7 @@
 #include <stdlib.h>
 
 static void free_component(void *p) {
-    struct component *c = p;
-    free(c->data);
-    free(c->id);
-    free(c->ix);
+    component_free_((struct component*)p);
 }
 
 static void test_attach_detach(void) {
@@ -122,10 +119,31 @@ static void test_lookup(void) {
     expect(component_lookup(&comp, 5) == NULL);
 }
 
+static void test_drop_entity(void) {
+    __attribute__((cleanup(free_component))) component(int) a = {0};
+    __attribute__((cleanup(free_component))) component(int) b = {0};
+
+    component_attach(&a, 1);
+    component_attach(&b, 1);
+    component_attach(&a, 2);
+    component_attach(&b, 2);
+
+    entity_drop(1);
+    expect(component_lookup(&a, 1) == NULL);
+    expect(component_lookup(&b, 1) == NULL);
+    expect(component_lookup(&a, 2));
+    expect(component_lookup(&b, 2));
+
+    entity_drop(2);
+    expect(component_lookup(&a, 2) == NULL);
+    expect(component_lookup(&b, 2) == NULL);
+}
+
 int main(void) {
     test_attach_detach();
     test_high_id();
     test_detach_invalid();
     test_lookup();
+    test_drop_entity();
     return 0;
 }

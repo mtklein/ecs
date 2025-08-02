@@ -2,6 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+static struct component *components;
+
+static void component_register(struct component *c, size_t size) {
+    if (!c->size) {
+        c->size = size;
+        c->next = components;
+        components = c;
+    }
+}
+
 static int max(int x, int y) {
     return x > y ? x : y;
 }
@@ -11,6 +21,7 @@ static _Bool is_pow2_or_zero(int x) {
 }
 
 void* component_attach_(struct component *c, size_t size, int id) {
+    component_register(c, size);
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
         c->ix = realloc(c->ix, (size_t)grown * sizeof *c->ix);
@@ -34,6 +45,7 @@ void* component_attach_(struct component *c, size_t size, int id) {
 }
 
 void component_detach_(struct component *c, size_t size, int id) {
+    component_register(c, size);
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
@@ -48,7 +60,8 @@ void component_detach_(struct component *c, size_t size, int id) {
     }
 }
 
-void* component_lookup_(struct component const *c, size_t size, int id) {
+void* component_lookup_(struct component *c, size_t size, int id) {
+    component_register(c, size);
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
@@ -56,4 +69,35 @@ void* component_lookup_(struct component const *c, size_t size, int id) {
         }
     }
     return NULL;
+}
+
+void component_free_(struct component *c) {
+    free(c->data);
+    free(c->id);
+    free(c->ix);
+
+    struct component **p = &components;
+    while (*p) {
+        if (*p == c) {
+            *p = c->next;
+            break;
+        }
+        p = &(*p)->next;
+    }
+
+    c->data = NULL;
+    c->id = NULL;
+    c->ix = NULL;
+    c->next = NULL;
+    c->size = 0;
+    c->n = 0;
+    c->cap = 0;
+}
+
+void entity_drop(int id) {
+    struct component *c = components;
+    while (c) {
+        component_detach_(c, c->size, id);
+        c = c->next;
+    }
 }
