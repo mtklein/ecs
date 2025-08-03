@@ -2,8 +2,6 @@
 
 #include <stddef.h>
 
-struct component;
-
 struct table {
     size_t const     *column_size;
     int               columns;
