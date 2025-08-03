@@ -16,8 +16,8 @@ _Bool survey_(struct table const*, int *id, void       *data, int const columns[
 void  update_(struct table      *, int  id, void const *data, int const columns[], int n);
 
 #define lookup(t,id,data,...) \
-    lookup_((t),(id),(data),(int const[]){__VA_ARGS__}, len((int const[]){__VA_ARGS__}))
+    lookup_((t),(id),(data),(int const[]){__VA_ARGS__}, len(((int const[]){__VA_ARGS__})))
 #define survey(t,id,data,...) \
-    survey_((t),(id),(data),(int const[]){__VA_ARGS__}, len((int const[]){__VA_ARGS__}))
+    survey_((t),(id),(data),(int const[]){__VA_ARGS__}, len(((int const[]){__VA_ARGS__})))
 #define update(t,id,data,...) \
-    update_((t),(id),(data),(int const[]){__VA_ARGS__}, len((int const[]){__VA_ARGS__}))
+    update_((t),(id),(data),(int const[]){__VA_ARGS__}, len(((int const[]){__VA_ARGS__})))
