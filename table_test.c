@@ -23,7 +23,7 @@ static void test_basics(void) {
     {
         int const id = next_id++;
         struct pos pos = {3,4};
-        update(&t,id, &pos, POS,~0);
+        update(&t,id, &pos, POS);
     }
     {
         int const id = next_id++;
@@ -31,18 +31,18 @@ static void test_basics(void) {
             struct pos   pos;
             struct stats stats;
         } cols = {{1,2}, {10,14,2,7}};
-        update(&t,id, &cols, POS,STATS,~0);
+        update(&t,id, &cols, POS,STATS);
     }
 
     struct pos   pos;
     struct stats stats;
-    expect( lookup(&t,0,&pos  ,POS  ,~0));
-    expect(!lookup(&t,0,&stats,STATS,~0));
-    expect( lookup(&t,1,&pos  ,POS  ,~0));
-    expect( lookup(&t,1,&stats,STATS,~0));
+    expect( lookup(&t,0,&pos  ,POS));
+    expect(!lookup(&t,0,&stats,STATS));
+    expect( lookup(&t,1,&pos  ,POS));
+    expect( lookup(&t,1,&stats,STATS));
 
     int n = 0;
-    for (int id = ~0; survey(&t,&id, &pos, POS,~0);) {
+    for (int id = ~0; survey(&t,&id, &pos, POS);) {
         n++;
     }
     expect(n == 2);
@@ -53,7 +53,7 @@ static void test_basics(void) {
     } join;
 
     n = 0;
-    for (int id = ~0; survey(&t,&id, &join, STATS,POS,~0);) {
+    for (int id = ~0; survey(&t,&id, &join, STATS,POS);) {
         expect(id == 1);
         expect(equiv(join.pos.x, 1));
         expect(join.stats.ac == 14);
@@ -63,21 +63,21 @@ static void test_basics(void) {
 
     {
         struct stats s = {20,30,3,4};
-        update(&t,0, &s, STATS,~0);
-        expect( lookup(&t,0,&stats, STATS,~0));
+        update(&t,0, &s, STATS);
+        expect( lookup(&t,0,&stats, STATS));
         expect(stats.hp == 20);
     }
     {
         struct { struct pos pos; struct stats stats; } patch = {{6,7}, {1,2,3,4}};
-        update(&t,1, &patch, POS,STATS,~0);
+        update(&t,1, &patch, POS,STATS);
         struct { struct stats stats; struct pos pos; } got;
-        expect( lookup(&t,1,&got, STATS,POS,~0));
+        expect( lookup(&t,1,&got, STATS,POS));
         expect(equiv(got.pos.x, 6));
         expect(got.stats.hp == 1);
     }
 
     n = 0;
-    for (int id = ~0; survey(&t,&id, &join, STATS,POS,~0);) {
+    for (int id = ~0; survey(&t,&id, &join, STATS,POS);) {
         n++;
     }
     expect(n == 2);

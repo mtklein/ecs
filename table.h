@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdarg.h>
 #include <stddef.h>
 
 struct table {
@@ -11,10 +10,16 @@ struct table {
 };
 void drop_table(struct table *);
 
-_Bool lookup(struct table const*, int  id, void       *data, .../*columns,~0*/);
-_Bool survey(struct table const*, int *id, void       *data, .../*columns,~0*/);
-void  update(struct table      *, int  id, void const *data, .../*columns,~0*/);
+_Bool lookup_(struct table const*, int id, void *data, int const columns[], int n);
+_Bool survey_(struct table const*, int *id, void *data, int const columns[], int n);
+void  update_(struct table *, int id, void const *data, int const columns[], int n);
 
-_Bool vlookup(struct table const*, int  id, void       *data, va_list columns);
-_Bool vsurvey(struct table const*, int *id, void       *data, va_list columns);
-void  vupdate(struct table      *, int  id, void const *data, va_list columns);
+#define lookup(t,id,data,...) \
+    lookup_((t),(id),(data),(int const[]){__VA_ARGS__}, \
+            (int)(sizeof((int const[]){__VA_ARGS__})/sizeof(int)))
+#define survey(t,id,data,...) \
+    survey_((t),(id),(data),(int const[]){__VA_ARGS__}, \
+            (int)(sizeof((int const[]){__VA_ARGS__})/sizeof(int)))
+#define update(t,id,data,...) \
+    update_((t),(id),(data),(int const[]){__VA_ARGS__}, \
+            (int)(sizeof((int const[]){__VA_ARGS__})/sizeof(int)))

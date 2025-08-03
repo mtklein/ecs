@@ -10,25 +10,14 @@ static void ensure(struct table *t) {
     }
 }
 
-_Bool lookup(struct table const *t, int id, void *data, ...) {
-    va_list ap;
-    va_start(ap, data);
-    _Bool const ok = vlookup(t, id, data, ap);
-    va_end(ap);
-    return ok;
-}
-
-_Bool vlookup(struct table const *t, int id, void *data, va_list ap) {
+_Bool lookup_(struct table const *t, int id, void *data, int const cols[], int n) {
     if (!t->comp) {
         return 0;
     }
 
     size_t off = 0;
-    for (;;) {
-        int const col = va_arg(ap, int);
-        if (col < 0) {
-            break;
-        }
+    for (int i = 0; i < n; i++) {
+        int const col = cols[i];
         void const *src = component_lookup_(t->comp + col, t->column_size[col], id);
         if (!src) {
             return 0;
@@ -39,30 +28,8 @@ _Bool vlookup(struct table const *t, int id, void *data, va_list ap) {
     return off > 0;
 }
 
-_Bool survey(struct table const *t, int *id, void *data, ...) {
-    va_list ap;
-    va_start(ap, data);
-    _Bool const ok = vsurvey(t, id, data, ap);
-    va_end(ap);
-    return ok;
-}
-
-_Bool vsurvey(struct table const *t, int *id, void *data, va_list ap) {
-    if (!t->comp) {
-        return 0;
-    }
-
-    int *cols = malloc((size_t)t->columns * sizeof *cols);
-    int n = 0;
-    for (;;) {
-        int const col = va_arg(ap, int);
-        if (col < 0) {
-            break;
-        }
-        cols[n++] = col;
-    }
-    if (!n) {
-        free(cols);
+_Bool survey_(struct table const *t, int *id, void *data, int const cols[], int n) {
+    if (!t->comp || !n) {
         return 0;
     }
 
@@ -86,7 +53,6 @@ _Bool vsurvey(struct table const *t, int *id, void *data, va_list ap) {
         }
     }
     if (next == INT_MAX) {
-        free(cols);
         return 0;
     }
 
@@ -97,25 +63,14 @@ _Bool vsurvey(struct table const *t, int *id, void *data, va_list ap) {
         off += t->column_size[cols[j]];
     }
     *id = next;
-    free(cols);
     return 1;
 }
 
-void update(struct table *t, int id, void const *data, ...) {
-    va_list ap;
-    va_start(ap, data);
-    vupdate(t, id, data, ap);
-    va_end(ap);
-}
-
-void vupdate(struct table *t, int id, void const *data, va_list ap) {
+void update_(struct table *t, int id, void const *data, int const cols[], int n) {
     ensure(t);
     size_t off = 0;
-    for (;;) {
-        int const col = va_arg(ap, int);
-        if (col < 0) {
-            break;
-        }
+    for (int i = 0; i < n; i++) {
+        int const col = cols[i];
         size_t const size = t->column_size[col];
         void *dst = component_attach_(t->comp + col, size, id);
         memcpy(dst, (char const*)data + off, size);
