@@ -1,0 +1,68 @@
+#include "table.h"
+#include "test.h"
+
+static void test_basics(void) {
+    struct pos {
+        float x,y;
+    };
+    struct stats {
+        int hp,ac,atk,def;
+    };
+
+    enum {POS, STATS};
+    size_t const column[] = {
+        [POS]   = sizeof(struct pos),
+        [STATS] = sizeof(struct stats),
+    };
+
+    struct table t = { .column = column };
+    int next_id = 0;
+
+    {
+        int const id = next_id++;
+        struct pos pos = {3,4};
+        update(&t,id, &pos, POS);
+    }
+    {
+        int const id = next_id++;
+        struct {
+            struct pos   pos;
+            struct stats stats;
+        } cols = {{1,2}, {10,14,2,7}};
+        update(&t,id, &cols, POS,STATS);
+    }
+
+    struct pos   pos;
+    struct stats stats;
+    expect( lookup(&t,0,&pos  ,POS  ));
+    expect(!lookup(&t,0,&stats,STATS));
+    expect( lookup(&t,1,&pos  ,POS  ));
+    expect( lookup(&t,1,&stats,STATS));
+
+    int n = 0;
+    for (int id = ~0; survey(&t,&id, &pos, POS);) {
+        n++;
+    }
+    expect(n == 2);
+
+    struct {
+        struct stats stats;
+        struct pos   pos;
+    } join;
+
+    n = 0;
+    for (int id = ~0; survey(&t,&id, &join, STATS,POS);) {
+        expect(id == 1);
+        expect(equiv(join.pos.x, 3));
+        expect(join.stats.ac == 14);
+        n++;
+    }
+    expect(n == 1);
+
+    // TODO: test update() too
+}
+
+int main(void) {
+    test_basics();
+    return 0;
+}

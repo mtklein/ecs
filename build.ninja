@@ -34,3 +34,6 @@ build out/bench:   link out/bench.o out/opt.o
 
 build out/aihack.o: compile  aihack.c
 build out/aihack:   link out/aihack.o out/ecs.o
+
+build out/table.o:      compile table.c
+build out/table_test.o: compile table_test.c
