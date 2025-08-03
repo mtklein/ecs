@@ -1,6 +1,8 @@
 #include "table.h"
 #include "test.h"
 
+#define len(x) (int)(sizeof (x) / sizeof *(x))
+
 static void test_basics(void) {
     struct pos {
         float x,y;
@@ -10,12 +12,12 @@ static void test_basics(void) {
     };
 
     enum {POS, STATS};
-    size_t const column[] = {
+    size_t const column_size[] = {
         [POS]   = sizeof(struct pos),
         [STATS] = sizeof(struct stats),
     };
 
-    struct table t = { .column = column, .columns = sizeof column / sizeof *column };
+    struct table t = { .column_size = column_size, .columns = len(column_size) };
     int next_id = 0;
 
     {
@@ -80,7 +82,7 @@ static void test_basics(void) {
     }
     expect(n == 2);
 
-    table_fini(&t);
+    drop_table(&t);
 }
 
 int main(void) {

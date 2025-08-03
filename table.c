@@ -29,12 +29,12 @@ _Bool vlookup(struct table const *t, int id, void *data, va_list ap) {
         if (col < 0) {
             break;
         }
-        void const *src = component_lookup_(t->comp + col, t->column[col], id);
+        void const *src = component_lookup_(t->comp + col, t->column_size[col], id);
         if (!src) {
             return 0;
         }
-        memcpy((char*)data + off, src, t->column[col]);
-        off += t->column[col];
+        memcpy((char*)data + off, src, t->column_size[col]);
+        off += t->column_size[col];
     }
     return off > 0;
 }
@@ -76,7 +76,7 @@ _Bool vsurvey(struct table const *t, int *id, void *data, va_list ap) {
         }
         _Bool ok = 1;
         for (int j = 1; j < n; j++) {
-            if (!component_lookup_(t->comp + cols[j], t->column[cols[j]], ent)) {
+            if (!component_lookup_(t->comp + cols[j], t->column_size[cols[j]], ent)) {
                 ok = 0;
                 break;
             }
@@ -92,9 +92,9 @@ _Bool vsurvey(struct table const *t, int *id, void *data, va_list ap) {
 
     size_t off = 0;
     for (int j = 0; j < n; j++) {
-        void const *src = component_lookup_(t->comp + cols[j], t->column[cols[j]], next);
-        memcpy((char*)data + off, src, t->column[cols[j]]);
-        off += t->column[cols[j]];
+        void const *src = component_lookup_(t->comp + cols[j], t->column_size[cols[j]], next);
+        memcpy((char*)data + off, src, t->column_size[cols[j]]);
+        off += t->column_size[cols[j]];
     }
     *id = next;
     free(cols);
@@ -116,22 +116,21 @@ void vupdate(struct table *t, int id, void const *data, va_list ap) {
         if (col < 0) {
             break;
         }
-        size_t const size = t->column[col];
+        size_t const size = t->column_size[col];
         void *dst = component_attach_(t->comp + col, size, id);
         memcpy(dst, (char const*)data + off, size);
         off += size;
     }
 }
 
-void table_fini(struct table *t) {
-    if (!t->comp) {
-        return;
+void drop_table(struct table *t) {
+    if (t->comp) {
+        for (int i = 0; i < t->columns; i++) {
+            free(t->comp[i].data);
+            free(t->comp[i].id);
+            free(t->comp[i].ix);
+        }
+        free(t->comp);
+        t->comp = NULL;
     }
-    for (int i = 0; i < t->columns; i++) {
-        free(t->comp[i].data);
-        free(t->comp[i].id);
-        free(t->comp[i].ix);
-    }
-    free(t->comp);
-    t->comp = NULL;
 }
