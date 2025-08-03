@@ -1,7 +1,6 @@
+#include "len.h"
 #include "table.h"
 #include "test.h"
-
-#define len(x) (int)(sizeof (x) / sizeof *(x))
 
 static void test_basics(void) {
     struct pos {

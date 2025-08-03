@@ -1,10 +1,9 @@
 #include "ecs.h"
+#include "len.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
-
-#define len(x) (int)(sizeof(x) / sizeof *(x))
 
 static int const nil     = 0;
 static int       next_id = 1;
