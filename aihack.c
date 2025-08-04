@@ -37,7 +37,7 @@ struct config_event {
     void *rng;
 };
 
-enum column {
+enum {
     POS,
     STATS,
     GLYPH,
