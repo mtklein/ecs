@@ -124,6 +124,31 @@ void update_(struct table *t, int id, void const *data, int const cols[], int n)
     }
 }
 
+static void component_detach_(struct component *c, size_t size, int id) {
+    if (id < c->cap) {
+        int const ix = c->ix[id];
+        if (ix >= 0) {
+            int const last = --c->n;
+            memmove((char      *)c->data + (size_t)ix   * size,
+                    (char const*)c->data + (size_t)last * size, size);
+            int const last_id = c->id[last];
+            c->id[ix] = last_id;
+            c->ix[last_id] = ix;
+            c->ix[id] = ~0;
+        }
+    }
+}
+
+void erase_(struct table *t, int id, int const cols[], int n) {
+    if (!t->comp) {
+        return;
+    }
+    for (int i = 0; i < n; i++) {
+        int const col = cols[i];
+        component_detach_(t->comp + col, t->column_size[col], id);
+    }
+}
+
 void drop_table(struct table *t) {
     if (t->comp) {
         for (int i = 0; i < t->columns; i++) {
