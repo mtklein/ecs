@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct component {
+// TODO: allow for other column representations, e.g. sorted by id rather than sparse-set
+struct column {
     void *data;
     int  *id,*ix;
     int   n,cap;
@@ -17,7 +18,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-static void* component_attach_(struct component *c, size_t size, int id) {
+static void* attach(struct column *c, size_t size, int id) {
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
         c->ix = realloc(c->ix, (size_t)grown * sizeof *c->ix);
@@ -40,7 +41,22 @@ static void* component_attach_(struct component *c, size_t size, int id) {
     return (char*)c->data + (size_t)ix * size;
 }
 
-static void* component_lookup_(struct component const *c, size_t size, int id) {
+static void detach(struct column *c, size_t size, int id) {
+    if (id < c->cap) {
+        int const ix = c->ix[id];
+        if (ix >= 0) {
+            int const last = --c->n;
+            memmove((char      *)c->data + (size_t)ix   * size,
+                    (char const*)c->data + (size_t)last * size, size);
+            int const last_id = c->id[last];
+            c->id[ix] = last_id;
+            c->ix[last_id] = ix;
+            c->ix[id] = ~0;
+        }
+    }
+}
+
+static void* find(struct column const *c, size_t size, int id) {
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
@@ -50,36 +66,28 @@ static void* component_lookup_(struct component const *c, size_t size, int id) {
     return NULL;
 }
 
-static void ensure(struct table *t) {
-    if (!t->comp && t->columns) {
-        t->comp = calloc((size_t)t->columns, sizeof *t->comp);
-    }
-}
-
-_Bool lookup_(struct table const *t, int id, void *data, int const cols[], int n) {
-    if (!t->comp) {
-        return 0;
-    }
-
-    size_t off = 0;
-    for (int i = 0; i < n; i++) {
-        int const col = cols[i];
-        void const *src = component_lookup_(t->comp + col, t->column_size[col], id);
+_Bool lookup_(struct table const *t, int id, void *data, int const column[], int columns) {
+    char *dst = data;
+    for (int i = 0; i < columns; i++) {
+        int    const c    = column[i];
+        size_t const size = t->column_size[c];
+        void const *src = find(t->column + c, size, id);
         if (!src) {
             return 0;
         }
-        memcpy((char*)data + off, src, t->column_size[col]);
-        off += t->column_size[col];
+        memcpy(dst, src, size);
+        dst += size;
     }
-    return off > 0;
+    return 1;
 }
 
-_Bool survey_(struct table const *t, int *id, void *data, int const cols[], int n) {
-    if (!t->comp || !n) {
+// TODO: still needs revision
+_Bool survey_(struct table const *t, int *id, void *data, int const column[], int columns) {
+    if (!t->column || !columns) {
         return 0;
     }
 
-    struct component const *base = t->comp + cols[0];
+    struct column const *base = t->column + column[0];
     int const last = *id;
     int next = INT_MAX;
     for (int i = 0; i < base->n; i++) {
@@ -88,8 +96,8 @@ _Bool survey_(struct table const *t, int *id, void *data, int const cols[], int 
             continue;
         }
         _Bool ok = 1;
-        for (int j = 1; j < n; j++) {
-            if (!component_lookup_(t->comp + cols[j], t->column_size[cols[j]], ent)) {
+        for (int j = 1; j < columns; j++) {
+            if (!find(t->column + column[j], t->column_size[column[j]], ent)) {
                 ok = 0;
                 break;
             }
@@ -103,35 +111,40 @@ _Bool survey_(struct table const *t, int *id, void *data, int const cols[], int 
     }
 
     size_t off = 0;
-    for (int j = 0; j < n; j++) {
-        void const *src = component_lookup_(t->comp + cols[j], t->column_size[cols[j]], next);
-        memcpy((char*)data + off, src, t->column_size[cols[j]]);
-        off += t->column_size[cols[j]];
+    for (int j = 0; j < columns; j++) {
+        void const *src = find(t->column + column[j], t->column_size[column[j]], next);
+        memcpy((char*)data + off, src, t->column_size[column[j]]);
+        off += t->column_size[column[j]];
     }
     *id = next;
     return 1;
 }
 
-void update_(struct table *t, int id, void const *data, int const cols[], int n) {
-    ensure(t);
-    size_t off = 0;
-    for (int i = 0; i < n; i++) {
-        int const col = cols[i];
-        size_t const size = t->column_size[col];
-        void *dst = component_attach_(t->comp + col, size, id);
-        memcpy(dst, (char const*)data + off, size);
-        off += size;
+void update_(struct table *t, int id, void const *data, int const column[], int columns) {
+    if (t->column == NULL) {
+        t->column = calloc((size_t)t->columns, sizeof *t->column);
+    }
+    char const *src = data;
+    for (int i = 0; i < columns; i++) {
+        int    const dst  = column[i];
+        size_t const size = t->column_size[dst];
+        memcpy(attach(t->column + dst, size, id), src, size);
+        src += size;
+    }
+}
+
+void erase_(struct table *t, int id, int const column[], int columns) {
+    for (int i = 0; i < columns; i++) {
+        int const c = column[i];
+        detach(t->column + c, t->column_size[c], id);
     }
 }
 
 void drop_table(struct table *t) {
-    if (t->comp) {
-        for (int i = 0; i < t->columns; i++) {
-            free(t->comp[i].data);
-            free(t->comp[i].id);
-            free(t->comp[i].ix);
-        }
-        free(t->comp);
-        t->comp = NULL;
+    for (int i = 0; i < t->columns; i++) {
+        free(t->column[i].data);
+        free(t->column[i].id);
+        free(t->column[i].ix);
     }
+    free(t->column);
 }
