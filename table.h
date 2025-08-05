@@ -17,9 +17,9 @@ void   erase_(int  id                  , struct column      **, int);
                  len(((struct column const*[]){__VA_ARGS__})))
 
 #define update(id, data, ...) \
-    update_(id, data, (struct column      *[]){__VA_ARGS__}, \
-                 len(((struct column      *[]){__VA_ARGS__})))
+    update_(id, data, (struct column*[]){__VA_ARGS__}, \
+                 len(((struct column*[]){__VA_ARGS__})))
 
-#define erase(id, data, ...) \
-    erase_(id       , (struct column      *[]){__VA_ARGS__}, \
-                 len(((struct column      *[]){__VA_ARGS__})))
+#define erase(id, ...) \
+    erase_(id, (struct column*[]){__VA_ARGS__}, \
+          len(((struct column*[]){__VA_ARGS__})))

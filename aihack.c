@@ -178,14 +178,14 @@ static void combat_system(int event) {
                     if (ds.hp <= 0) {
                         char x = 'x';
                         update(a.defender, &x, glyph);
-                        erase(a.defender, 0, stats, disp);
+                        erase(a.defender, stats, disp);
                     } else {
                         update(a.defender, &ds, stats);
                     }
                 }
             }
         } else if (has_as && !has_ds) {
-            erase(a.defender, 0, pos, glyph);
+            erase(a.defender, pos, glyph);
         }
     }
 }
