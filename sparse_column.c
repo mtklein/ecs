@@ -18,7 +18,7 @@ static _Bool is_pow2_or_zero(int x) {
     return (x & (x-1)) == 0;
 }
 
-static size_t sparse_attach(struct column *base, int id, void const *src) {
+static void sparse_attach(struct column *base, int id, void const *src) {
     struct sparse_column *c = (struct sparse_column*)base;
     if (id >= c->cap) {
         int const grown = max(id+1, 2*c->cap);
@@ -41,7 +41,6 @@ static size_t sparse_attach(struct column *base, int id, void const *src) {
 
     char *dst = (char*)c->data + (size_t)ix * c->size;
     memcpy(dst, src, c->size);
-    return c->size;
 }
 
 static void sparse_detach(struct column *base, int id) {
@@ -60,14 +59,14 @@ static void sparse_detach(struct column *base, int id) {
     }
 }
 
-static size_t sparse_find(struct column const *base, int id, void *dst) {
+static _Bool sparse_find(struct column const *base, int id, void *dst) {
     struct sparse_column const *c = (struct sparse_column const*)base;
     if (id < c->cap) {
         int const ix = c->ix[id];
         if (ix >= 0) {
             char const *src = (char*)c->data + (size_t)ix * c->size;
             memcpy(dst, src, c->size);
-            return c->size;
+            return 1;
         }
     }
     return 0;
