@@ -27,4 +27,4 @@ build out/table_test:    link out/table_test.o out/table.o out/sparse_column.o
 build out/table_test.ok: run  out/table_test
 
 build out/aihack.o: compile  aihack.c
-build out/aihack:   link out/aihack.o out/table.o
+build out/aihack:   link out/aihack.o out/table.o out/sparse_column.o

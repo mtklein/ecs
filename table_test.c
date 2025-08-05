@@ -63,64 +63,36 @@ static void test_basics(void) {
     }
     expect(n == 1);
 
-#if 0
-    {
-        struct stats s = {20,30,3,4};
-        update(&t,0, &s, STATS);
-        expect( lookup(&t,0,&stats, STATS));
-        expect(stats.hp == 20);
-    }
-    {
-        struct { struct pos pos; struct stats stats; } patch = {{6,7}, {1,2,3,4}};
-        update(&t,1, &patch, POS,STATS);
-        struct { struct stats stats; struct pos pos; } got;
-        expect( lookup(&t,1,&got, STATS,POS));
-        expect(equiv(got.pos.x, 6));
-        expect(got.stats.hp == 1);
-    }
-
-    n = 0;
-    for (int id = ~0; survey(&t,&id, &join, STATS,POS);) {
-        n++;
-    }
-    expect(n == 2);
-#endif
 }
 
 static void test_update_during_iteration(void) {
-#if 0
     struct pos {
         float x,y;
     };
 
-    enum {POS};
-    size_t const column_size[] = {
-        [POS] = sizeof(struct pos),
-    };
-
-    struct table t = { .column_size = column_size, .columns = len(column_size) };
+    __attribute__((cleanup(cleanup_column)))
+    struct column *pos = sparse_column(sizeof(struct pos));
 
     for (int id = 0; id < 3; id++) {
-        struct pos pos = { (float)id, (float)id };
-        update(&t,id, &pos, POS);
+        struct pos p = { (float)id, (float)id };
+        update(id, &p, pos);
     }
 
-    struct pos pos;
+    struct pos p;
     int n = 0;
-    for (int id = ~0; survey(&t,&id, &pos, POS); update(&t,id, &pos, POS)) {
-        pos.x += 10;
-        pos.y += 10;
+    for (int id = ~0; survey(&id, &p, pos); update(id, &p, pos)) {
+        p.x += 10;
+        p.y += 10;
         n++;
     }
     expect(n == 3);
 
     for (int id = 0; id < 3; id++) {
         struct pos got;
-        expect( lookup(&t,id,&got, POS));
+        expect( lookup(id, &got, pos));
         expect(equiv(got.x, (float)id + 10));
         expect(equiv(got.y, (float)id + 10));
     }
-#endif
 }
 
 int main(void) {
