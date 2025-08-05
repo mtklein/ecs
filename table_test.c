@@ -84,7 +84,44 @@ static void test_basics(void) {
     drop_table(&t);
 }
 
+static void test_update_during_iteration(void) {
+    struct pos {
+        float x,y;
+    };
+
+    enum {POS};
+    size_t const column_size[] = {
+        [POS] = sizeof(struct pos),
+    };
+
+    struct table t = { .column_size = column_size, .columns = len(column_size) };
+
+    for (int id = 0; id < 3; id++) {
+        struct pos pos = { (float)id, (float)id };
+        update(&t,id, &pos, POS);
+    }
+
+    struct pos pos;
+    int n = 0;
+    for (int id = ~0; survey(&t,&id, &pos, POS); update(&t,id, &pos, POS)) {
+        pos.x += 10;
+        pos.y += 10;
+        n++;
+    }
+    expect(n == 3);
+
+    for (int id = 0; id < 3; id++) {
+        struct pos got;
+        expect( lookup(&t,id,&got, POS));
+        expect(equiv(got.x, (float)id + 10));
+        expect(equiv(got.y, (float)id + 10));
+    }
+
+    drop_table(&t);
+}
+
 int main(void) {
     test_basics();
+    test_update_during_iteration();
     return 0;
 }
