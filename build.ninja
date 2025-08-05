@@ -20,10 +20,11 @@ rule run
     command = ./$in > $out
 
 build out/sparse_column.o: compile sparse_column.c
+build out/sorted_column.o: compile sorted_column.c
 
 build out/table.o:       compile  table.c
 build out/table_test.o:  compile  table_test.c
-build out/table_test:    link out/table_test.o out/table.o out/sparse_column.o
+build out/table_test:    link out/table_test.o out/table.o out/sparse_column.o out/sorted_column.o
 build out/table_test.ok: run  out/table_test
 
 build out/aihack.o: compile  aihack.c
