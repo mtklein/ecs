@@ -1,39 +1,66 @@
+#include "column.h"
 #include "table.h"
+#include <stdarg.h>
 
-_Bool lookup_(int id, void *data, struct column const *col[], int cols) {
-    char *dst = data;
-    for (int i = 0; i < cols; i++) {
-        struct column const *c   = col[i];
-        size_t        const size = c->vptr->find(c, id, dst);
-        if (!size) {
+static _Bool vlookup(int id, struct column const *c, va_list ap) {
+    while (1) {
+        if (!c) {
+            return 1;
+        }
+        if (!c->vptr->find(c,id, va_arg(ap, void*))) {
             return 0;
         }
-        dst += size;
-    }
-    return 1;
-}
-
-void update_(int id, void const *data, struct column *col[], int cols) {
-    char const *src = data;
-    for (int i = 0; i < cols; i++) {
-        struct column *c = col[i];
-        src += c->vptr->attach(c, id, src);
+        c = va_arg(ap, struct column const*);
     }
 }
 
-void erase_(int id, struct column *col[], int cols) {
-    for (int i = 0; i < cols; i++) {
-        struct column *c = col[i];
+_Bool lookup(int id, ...) {
+    va_list ap;
+    va_start(ap,id);
+    struct column const *c = va_arg(ap, struct column const*);
+    _Bool const rc = vlookup(id, c, ap);
+    va_end(ap);
+    return rc;
+}
+
+void update(int id, ...) {
+    va_list ap;
+    va_start(ap,id);
+
+    while (1) {
+        struct column *c = va_arg(ap, struct column*);
+        if (!c) {
+            va_end(ap);
+            return;
+        }
+        c->vptr->attach(c, id, va_arg(ap, void const*));
+    }
+}
+
+void erase(int id, ...) {
+    va_list ap;
+    va_start(ap,id);
+
+    while (1) {
+        struct column *c = va_arg(ap, struct column*);
+        if (!c) {
+            va_end(ap);
+            return;
+        }
         c->vptr->detach(c, id);
     }
 }
 
-_Bool survey_(int *id, void *data, struct column const *col[], int cols) {
-    struct column const *guide = *col;
+_Bool survey(int *id, ...) {
+    va_list ap;
+    va_start(ap,id);
+    struct column const *guide = va_arg(ap, struct column const*);
     while (guide->vptr->walk(guide, id)) {
-        if (lookup_(*id,data,col,cols)) {
+        if (vlookup(*id,guide,ap)) {
+            va_end(ap);
             return 1;
         }
     }
+    va_end(ap);
     return 0;
 }

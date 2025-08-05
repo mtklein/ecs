@@ -58,12 +58,12 @@ static void drop_columns(void) {
 #define queue_event(col, ...) \
     do { \
         __typeof__((__VA_ARGS__)) tmp = (__VA_ARGS__); \
-        update(event_last++, &tmp, col); \
+        update(event_last++, col,&tmp, NULL); \
     } while (0)
 
 static int entity_at(int x, int y) {
     struct pos p;
-    for (int id = ~0; survey(&id, &p, pos);) {
+    for (int id = ~0; survey(&id, pos,&p, NULL);) {
         if (p.x == x && p.y == y) {
             return id;
         }
@@ -72,11 +72,12 @@ static int entity_at(int x, int y) {
 }
 
 static struct attack_event try_move(int dx, int dy, int w, int h) {
-    struct { struct pos pos; enum disposition disp; } e;
-    for (int id = ~0; survey(&id, &e, pos, disp);) {
-        if (e.disp == LEADER) {
-            int const x = e.pos.x + dx,
-                      y = e.pos.y + dy;
+    struct pos       p;
+    enum disposition d;
+    for (int id = ~0; survey(&id, pos,&p, disp,&d, NULL);) {
+        if (d == LEADER) {
+            int const x = p.x + dx,
+                      y = p.y + dy;
             if (x<0 || y<0 || x>=w || y>=h) {
                 break;
             }
@@ -85,9 +86,9 @@ static struct attack_event try_move(int dx, int dy, int w, int h) {
             if (found) {
                 return (struct attack_event){id, found};
             } else {
-                e.pos.x = x;
-                e.pos.y = y;
-                update(id, &e.pos, pos);
+                p.x = x;
+                p.y = y;
+                update(id, pos,&p, NULL);
             }
         }
     }
@@ -109,20 +110,21 @@ static void game_state_system(int event) {
     static enum game_state *game_state;
 
     struct config_event c;
-    if (lookup(event, &c, config_event)) {
+    if (lookup(event, config_event,&c, NULL)) {
         game_state = c.game_state;
     }
 
     struct key_event k;
-    if (lookup(event, &k, key_event)) {
+    if (lookup(event, key_event,&k, NULL)) {
         if (k.key == 'q') {
             *game_state = QUIT;
         }
     }
 
-    struct { struct stats stats; enum disposition disp; } e;
-    for (int id = ~0; survey(&id, &e, stats, disp);) {
-        if (e.disp == LEADER && e.stats.hp <= 0) {
+    struct stats     s;
+    enum disposition d;
+    for (int id = ~0; survey(&id, stats,&s, disp,&d, NULL);) {
+        if (d == LEADER && s.hp <= 0) {
             *game_state = DIED;
         }
     }
@@ -132,13 +134,13 @@ static void movement_system(int event) {
     static int w,h;
 
     struct config_event c;
-    if (lookup(event, &c, config_event)) {
+    if (lookup(event, config_event,&c, NULL)) {
         w = c.w;
         h = c.h;
     }
 
     struct key_event k;
-    if (lookup(event, &k, key_event)) {
+    if (lookup(event, key_event,&k, NULL)) {
         int dx=0, dy=0;
         switch (k.key) {
             default: return;
@@ -160,16 +162,16 @@ static void combat_system(int event) {
     static void *rng;
 
     struct config_event c;
-    if (lookup(event, &c, config_event)) {
+    if (lookup(event, config_event,&c, NULL)) {
         d20 = c.d20;
         rng = c.rng;
     }
 
     struct attack_event a;
-    if (lookup(event, &a, attack_event)) {
+    if (lookup(event, attack_event,&a, NULL)) {
         struct stats as, ds;
-        _Bool const has_as = lookup(a.attacker, &as, stats);
-        _Bool const has_ds = lookup(a.defender, &ds, stats);
+        _Bool const has_as = lookup(a.attacker, stats,&as, NULL);
+        _Bool const has_ds = lookup(a.defender, stats,&ds, NULL);
         if (has_as && has_ds) {
             int const roll = d20(rng);
             if (roll > 1) {
@@ -177,15 +179,15 @@ static void combat_system(int event) {
                     ds.hp -= as.dmg;
                     if (ds.hp <= 0) {
                         char x = 'x';
-                        update(a.defender, &x, glyph);
-                        erase(a.defender, stats, disp);
+                        update(a.defender, glyph,&x, NULL);
+                        erase(a.defender, stats, disp, NULL);
                     } else {
-                        update(a.defender, &ds, stats);
+                        update(a.defender, stats,&ds, NULL);
                     }
                 }
             }
         } else if (has_as && !has_ds) {
-            erase(a.defender, pos, glyph);
+            erase(a.defender, pos, glyph, NULL);
         }
     }
 }
@@ -194,7 +196,7 @@ static void draw_system(int event) {
     static int w,h;
 
     struct config_event c;
-    if (lookup(event, &c, config_event)) {
+    if (lookup(event, config_event,&c, NULL)) {
         w = c.w;
         h = c.h;
     }
@@ -215,8 +217,8 @@ static void draw_system(int event) {
 
             enum disposition d;
             char g;
-            _Bool const has_d = lookup(id, &d, disp);
-            _Bool const has_g = lookup(id, &g, glyph);
+            _Bool const has_d = lookup(id, disp,&d, NULL);
+            _Bool const has_g = lookup(id, glyph,&g, NULL);
             printf("%s%c", has_d ? color[d] : "\033[0m",
                          has_g ? g      : '.');
         }
@@ -260,30 +262,16 @@ int main(int argc, char const* argv[]) {
     printf("\033[?25l");
     atexit(reset_terminal);
 
-    {
-        int const id = next_id++;
-        struct {
-            struct pos pos;
-            struct stats stats;
-            char glyph;
-            int  :24;
-        } cols = {{1,1}, {10,10,2,4}, '@'};
-        update(id, &cols, pos,stats,glyph);
-        enum disposition d = LEADER;
-        update(id, &d, disp);
-    }
-    {
-        int const id = next_id++;
-        struct {
-            struct pos pos;
-            struct stats stats;
-            char glyph;
-            int  :24;
-        } cols = {{3,1}, {4,12,3,2}, 'i'};
-        update(id, &cols, pos,stats,glyph);
-        enum disposition d = HOSTILE;
-        update(id, &d, disp);
-    }
+    update(next_id++, pos,   &(struct pos){1,1}
+                    , stats, &(struct stats){10,10,2,4}
+                    , glyph, &(char){'@'}
+                    , disp,  &(enum disposition){LEADER},
+                    NULL);
+    update(next_id++, pos,   &(struct pos){3,1}
+                    , stats, &(struct stats){4,12,3,2}
+                    , glyph, &(char){'i'}
+                    , disp,  &(enum disposition){HOSTILE},
+                    NULL);
 
     void (*system[])(int) = {
         game_state_system,

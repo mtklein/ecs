@@ -25,40 +25,33 @@ static void test_basics(void) {
 
     {
         int const id = next_id++;
-        update(id, &((struct pos){3,4}), pos);
+        update(id, pos,&(struct pos){3,4}, NULL);
     }
     {
         int const id = next_id++;
-        struct {
-            struct pos   pos;
-            struct stats stats;
-        } join = {{1,2}, {10,14,2,7}};
-        update(id, &join, pos,stats);
+        struct pos   p = {1,2};
+        struct stats s = {10,14,2,7};
+        update(id, pos,&p, stats,&s, NULL);
     }
 
     struct pos   p;
     struct stats s;
-    expect( lookup(0, &p, pos));
-    expect(!lookup(0, &s, stats));
-    expect( lookup(1, &p, pos));
-    expect( lookup(1, &s, stats));
+    expect( lookup(0, pos,&p,   NULL));
+    expect(!lookup(0, stats,&s, NULL));
+    expect( lookup(1, pos,&p,   NULL));
+    expect( lookup(1, stats,&s, NULL));
 
     int n = 0;
-    for (int id = ~0; survey(&id, &p, pos);) {
+    for (int id = ~0; survey(&id, pos,&p, NULL);) {
         n++;
     }
     expect(n == 2);
 
-    struct {
-        struct stats stats;
-        struct pos   pos;
-    } join;
-
     n = 0;
-    for (int id = ~0; survey(&id, &join, stats,pos);) {
+    for (int id = ~0; survey(&id, stats,&s, pos,&p, NULL);) {
         expect(id == 1);
-        expect(equiv(join.pos.x, 1));
-        expect(join.stats.ac == 14);
+        expect(equiv(p.x, 1));
+        expect(s.ac == 14);
         n++;
     }
     expect(n == 1);
@@ -75,12 +68,12 @@ static void test_update_during_iteration(void) {
 
     for (int id = 0; id < 3; id++) {
         struct pos p = { (float)id, (float)id };
-        update(id, &p, pos);
+        update(id, pos,&p, NULL);
     }
 
     struct pos p;
     int n = 0;
-    for (int id = ~0; survey(&id, &p, pos); update(id, &p, pos)) {
+    for (int id = ~0; survey(&id, pos,&p, NULL); update(id, pos,&p, NULL)) {
         p.x += 10;
         p.y += 10;
         n++;
@@ -89,7 +82,7 @@ static void test_update_during_iteration(void) {
 
     for (int id = 0; id < 3; id++) {
         struct pos got;
-        expect( lookup(id, &got, pos));
+        expect( lookup(id, pos,&got, NULL));
         expect(equiv(got.x, (float)id + 10));
         expect(equiv(got.y, (float)id + 10));
     }
