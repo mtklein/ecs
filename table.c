@@ -1,5 +1,4 @@
 #include "table.h"
-#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,10 +67,9 @@ static void* find(struct column const *c, size_t size, int id) {
 
 _Bool lookup_(struct table const *t, int id, void *data, int const column[], int columns) {
     char *dst = data;
-    for (int i = 0; i < columns; i++) {
-        int    const c    = column[i];
-        size_t const size = t->column_size[c];
-        void const *src = find(t->column + c, size, id);
+    for (int const *c = column; c < column + columns; c++) {
+        size_t const size = t->column_size[*c];
+        void   const *src = find(t->column + *c, size, id);
         if (!src) {
             return 0;
         }
@@ -81,62 +79,34 @@ _Bool lookup_(struct table const *t, int id, void *data, int const column[], int
     return 1;
 }
 
-// TODO: still needs revision
 _Bool survey_(struct table const *t, int *id, void *data, int const column[], int columns) {
-    if (!t->column || !columns) {
-        return 0;
-    }
-
-    struct column const *base = t->column + column[0];
-    int const last = *id;
-    int next = INT_MAX;
-    for (int i = 0; i < base->n; i++) {
-        int const ent = base->id[i];
-        if (ent <= last || ent >= next) {
-            continue;
-        }
-        _Bool ok = 1;
-        for (int j = 1; j < columns; j++) {
-            if (!find(t->column + column[j], t->column_size[column[j]], ent)) {
-                ok = 0;
-                break;
-            }
-        }
-        if (ok) {
-            next = ent;
+    struct column const *guide = t->column + *column;
+    for (int ix = *id >= 0 ? guide->ix[*id]+1 : 0; ix < guide->n; ix++) {
+        *id = guide->id[ix];
+        if (lookup_(t, *id, data, column, columns)) {
+            return 1;
         }
     }
-    if (next == INT_MAX) {
-        return 0;
-    }
-
-    size_t off = 0;
-    for (int j = 0; j < columns; j++) {
-        void const *src = find(t->column + column[j], t->column_size[column[j]], next);
-        memcpy((char*)data + off, src, t->column_size[column[j]]);
-        off += t->column_size[column[j]];
-    }
-    *id = next;
-    return 1;
+    return 0;
 }
+
 
 void update_(struct table *t, int id, void const *data, int const column[], int columns) {
     if (t->column == NULL) {
         t->column = calloc((size_t)t->columns, sizeof *t->column);
     }
     char const *src = data;
-    for (int i = 0; i < columns; i++) {
-        int    const dst  = column[i];
-        size_t const size = t->column_size[dst];
-        memcpy(attach(t->column + dst, size, id), src, size);
+    for (int const *c = column; c < column + columns; c++) {
+        size_t const size = t->column_size[*c];
+        char         *dst = attach(t->column + *c, size, id);
+        memcpy(dst, src, size);
         src += size;
     }
 }
 
 void erase_(struct table *t, int id, int const column[], int columns) {
-    for (int i = 0; i < columns; i++) {
-        int const c = column[i];
-        detach(t->column + c, t->column_size[c], id);
+    for (int const *c = column; c < column + columns; c++) {
+        detach(t->column + *c, t->column_size[*c], id);
     }
 }
 
