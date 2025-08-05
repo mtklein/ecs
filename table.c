@@ -14,7 +14,7 @@ static _Bool vlookup(int id, struct column const *c, va_list ap) {
     }
 }
 
-_Bool lookup(int id, ...) {
+_Bool lookup_(int id, ...) {
     va_list ap;
     va_start(ap,id);
     struct column const *c = va_arg(ap, struct column const*);
@@ -23,7 +23,7 @@ _Bool lookup(int id, ...) {
     return rc;
 }
 
-void update(int id, ...) {
+void update_(int id, ...) {
     va_list ap;
     va_start(ap,id);
 
@@ -37,7 +37,7 @@ void update(int id, ...) {
     }
 }
 
-void erase(int id, ...) {
+void erase_(int id, ...) {
     va_list ap;
     va_start(ap,id);
 
@@ -51,7 +51,7 @@ void erase(int id, ...) {
     }
 }
 
-_Bool survey(int *id, ...) {
+_Bool survey_(int *id, ...) {
     va_list ap;
     va_start(ap,id);
     struct column const *guide = va_arg(ap, struct column const*);

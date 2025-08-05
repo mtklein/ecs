@@ -23,32 +23,30 @@ static void test_basics(void) {
 
     int next_id = 0;
 
-    {
-        int const id = next_id++;
-        update(id, pos,&(struct pos){3,4}, NULL);
-    }
+    update(next_id++, pos, &(struct pos){3,4});
+
     {
         int const id = next_id++;
         struct pos   p = {1,2};
         struct stats s = {10,14,2,7};
-        update(id, pos,&p, stats,&s, NULL);
+        update(id, pos,&p, stats,&s);
     }
 
     struct pos   p;
     struct stats s;
-    expect( lookup(0, pos,&p,   NULL));
-    expect(!lookup(0, stats,&s, NULL));
-    expect( lookup(1, pos,&p,   NULL));
-    expect( lookup(1, stats,&s, NULL));
+    expect( lookup(0, pos  ,&p));
+    expect(!lookup(0, stats,&s));
+    expect( lookup(1, pos,  &p));
+    expect( lookup(1, stats,&s));
 
     int n = 0;
-    for (int id = ~0; survey(&id, pos,&p, NULL);) {
+    for (int id = ~0; survey(&id, pos,&p);) {
         n++;
     }
     expect(n == 2);
 
     n = 0;
-    for (int id = ~0; survey(&id, stats,&s, pos,&p, NULL);) {
+    for (int id = ~0; survey(&id, stats,&s, pos,&p);) {
         expect(id == 1);
         expect(equiv(p.x, 1));
         expect(s.ac == 14);
@@ -68,12 +66,12 @@ static void test_update_during_iteration(void) {
 
     for (int id = 0; id < 3; id++) {
         struct pos p = { (float)id, (float)id };
-        update(id, pos,&p, NULL);
+        update(id, pos,&p);
     }
 
     struct pos p;
     int n = 0;
-    for (int id = ~0; survey(&id, pos,&p, NULL); update(id, pos,&p, NULL)) {
+    for (int id = ~0; survey(&id, pos,&p); update(id, pos,&p)) {
         p.x += 10;
         p.y += 10;
         n++;
@@ -82,7 +80,7 @@ static void test_update_during_iteration(void) {
 
     for (int id = 0; id < 3; id++) {
         struct pos got;
-        expect( lookup(id, pos,&got, NULL));
+        expect( lookup(id, pos,&got));
         expect(equiv(got.x, (float)id + 10));
         expect(equiv(got.y, (float)id + 10));
     }
