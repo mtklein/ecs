@@ -1,4 +1,5 @@
 #include "len.h"
+#include "sparse_column.h"
 #include "table.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,40 +38,32 @@ struct config_event {
     void *rng;
 };
 
-enum {
-    POS,
-    STATS,
-    GLYPH,
-    DISP,
-    KEY_EVENT,
-    ATTACK_EVENT,
-    CONFIG_EVENT,
-};
+static struct column *pos;
+static struct column *stats;
+static struct column *glyph;
+static struct column *disp;
+static struct column *key_event;
+static struct column *attack_event;
+static struct column *config_event;
 
-static size_t const column_size[] = {
-    [POS]          = sizeof(struct pos),
-    [STATS]        = sizeof(struct stats),
-    [GLYPH]        = sizeof(char),
-    [DISP]         = sizeof(enum disposition),
-    [KEY_EVENT]    = sizeof(struct key_event),
-    [ATTACK_EVENT] = sizeof(struct attack_event),
-    [CONFIG_EVENT] = sizeof(struct config_event),
-};
-
-static struct table world = {
-    .column_size = column_size,
-    .columns = len(column_size),
-};
+static void drop_columns(void) {
+    struct column *col[] = {pos,stats,glyph,disp,key_event,attack_event,config_event};
+    for (int i = 0; i < len(col); i++) {
+        if (col[i]) {
+            col[i]->vptr->drop(col[i]);
+        }
+    }
+}
 
 #define queue_event(col, ...) \
     do { \
         __typeof__((__VA_ARGS__)) tmp = (__VA_ARGS__); \
-        update(&world, event_last++, &tmp, col); \
+        update(event_last++, &tmp, col); \
     } while (0)
 
 static int entity_at(int x, int y) {
     struct pos p;
-    for (int id = ~0; survey(&world, &id, &p, POS);) {
+    for (int id = ~0; survey(&id, &p, pos);) {
         if (p.x == x && p.y == y) {
             return id;
         }
@@ -80,7 +73,7 @@ static int entity_at(int x, int y) {
 
 static struct attack_event try_move(int dx, int dy, int w, int h) {
     struct { struct pos pos; enum disposition disp; } e;
-    for (int id = ~0; survey(&world, &id, &e, POS, DISP);) {
+    for (int id = ~0; survey(&id, &e, pos, disp);) {
         if (e.disp == LEADER) {
             int const x = e.pos.x + dx,
                       y = e.pos.y + dy;
@@ -94,7 +87,7 @@ static struct attack_event try_move(int dx, int dy, int w, int h) {
             } else {
                 e.pos.x = x;
                 e.pos.y = y;
-                update(&world, id, &e.pos, POS);
+                update(id, &e.pos, pos);
             }
         }
     }
@@ -116,19 +109,19 @@ static void game_state_system(int event) {
     static enum game_state *game_state;
 
     struct config_event c;
-    if (lookup(&world, event, &c, CONFIG_EVENT)) {
+    if (lookup(event, &c, config_event)) {
         game_state = c.game_state;
     }
 
     struct key_event k;
-    if (lookup(&world, event, &k, KEY_EVENT)) {
+    if (lookup(event, &k, key_event)) {
         if (k.key == 'q') {
             *game_state = QUIT;
         }
     }
 
     struct { struct stats stats; enum disposition disp; } e;
-    for (int id = ~0; survey(&world, &id, &e, STATS, DISP);) {
+    for (int id = ~0; survey(&id, &e, stats, disp);) {
         if (e.disp == LEADER && e.stats.hp <= 0) {
             *game_state = DIED;
         }
@@ -139,13 +132,13 @@ static void movement_system(int event) {
     static int w,h;
 
     struct config_event c;
-    if (lookup(&world, event, &c, CONFIG_EVENT)) {
+    if (lookup(event, &c, config_event)) {
         w = c.w;
         h = c.h;
     }
 
     struct key_event k;
-    if (lookup(&world, event, &k, KEY_EVENT)) {
+    if (lookup(event, &k, key_event)) {
         int dx=0, dy=0;
         switch (k.key) {
             default: return;
@@ -157,7 +150,7 @@ static void movement_system(int event) {
 
         struct attack_event a = try_move(dx,dy, w,h);
         if (a.defender) {
-            queue_event(ATTACK_EVENT, a);
+            queue_event(attack_event, a);
         }
     }
 }
@@ -167,16 +160,16 @@ static void combat_system(int event) {
     static void *rng;
 
     struct config_event c;
-    if (lookup(&world, event, &c, CONFIG_EVENT)) {
+    if (lookup(event, &c, config_event)) {
         d20 = c.d20;
         rng = c.rng;
     }
 
     struct attack_event a;
-    if (lookup(&world, event, &a, ATTACK_EVENT)) {
+    if (lookup(event, &a, attack_event)) {
         struct stats as, ds;
-        _Bool const has_as = lookup(&world, a.attacker, &as, STATS);
-        _Bool const has_ds = lookup(&world, a.defender, &ds, STATS);
+        _Bool const has_as = lookup(a.attacker, &as, stats);
+        _Bool const has_ds = lookup(a.defender, &ds, stats);
         if (has_as && has_ds) {
             int const roll = d20(rng);
             if (roll > 1) {
@@ -184,15 +177,15 @@ static void combat_system(int event) {
                     ds.hp -= as.dmg;
                     if (ds.hp <= 0) {
                         char x = 'x';
-                        update(&world, a.defender, &x, GLYPH);
-                        erase(&world, a.defender, STATS, DISP);
+                        update(a.defender, &x, glyph);
+                        erase(a.defender, 0, stats, disp);
                     } else {
-                        update(&world, a.defender, &ds, STATS);
+                        update(a.defender, &ds, stats);
                     }
                 }
             }
         } else if (has_as && !has_ds) {
-            erase(&world, a.defender, POS, GLYPH);
+            erase(a.defender, 0, pos, glyph);
         }
     }
 }
@@ -201,7 +194,7 @@ static void draw_system(int event) {
     static int w,h;
 
     struct config_event c;
-    if (lookup(&world, event, &c, CONFIG_EVENT)) {
+    if (lookup(event, &c, config_event)) {
         w = c.w;
         h = c.h;
     }
@@ -222,8 +215,8 @@ static void draw_system(int event) {
 
             enum disposition d;
             char g;
-            _Bool const has_d = lookup(&world, id, &d, DISP);
-            _Bool const has_g = lookup(&world, id, &g, GLYPH);
+            _Bool const has_d = lookup(id, &d, disp);
+            _Bool const has_g = lookup(id, &g, glyph);
             printf("%s%c", has_d ? color[d] : "\033[0m",
                          has_g ? g      : '.');
         }
@@ -248,6 +241,15 @@ int main(int argc, char const* argv[]) {
     int const w=10, h=5;
     unsigned seed = (unsigned)(argc > 1 ? atoi(argv[1]) : 0);
 
+    pos         = sparse_column(sizeof(struct pos));
+    stats       = sparse_column(sizeof(struct stats));
+    glyph       = sparse_column(sizeof(char));
+    disp        = sparse_column(sizeof(enum disposition));
+    key_event   = sparse_column(sizeof(struct key_event));
+    attack_event= sparse_column(sizeof(struct attack_event));
+    config_event= sparse_column(sizeof(struct config_event));
+    atexit(drop_columns);
+
     {
         struct termios termios;
         tcgetattr(STDIN_FILENO, &termios);
@@ -266,9 +268,9 @@ int main(int argc, char const* argv[]) {
             char glyph;
             int  :24;
         } cols = {{1,1}, {10,10,2,4}, '@'};
-        update(&world, id, &cols, POS,STATS,GLYPH);
-        enum disposition disp = LEADER;
-        update(&world, id, &disp, DISP);
+        update(id, &cols, pos,stats,glyph);
+        enum disposition d = LEADER;
+        update(id, &d, disp);
     }
     {
         int const id = next_id++;
@@ -278,9 +280,9 @@ int main(int argc, char const* argv[]) {
             char glyph;
             int  :24;
         } cols = {{3,1}, {4,12,3,2}, 'i'};
-        update(&world, id, &cols, POS,STATS,GLYPH);
-        enum disposition disp = HOSTILE;
-        update(&world, id, &disp, DISP);
+        update(id, &cols, pos,stats,glyph);
+        enum disposition d = HOSTILE;
+        update(id, &d, disp);
     }
 
     void (*system[])(int) = {
@@ -293,12 +295,12 @@ int main(int argc, char const* argv[]) {
     enum game_state game_state = RUNNING;
 
     {
-        queue_event(CONFIG_EVENT, (struct config_event){w,h,&game_state,d20,&seed});
+        queue_event(config_event, (struct config_event){w,h,&game_state,d20,&seed});
         drain_events(system, len(system));
     }
 
     while (game_state == RUNNING) {
-        queue_event(KEY_EVENT, (struct key_event){getchar()});
+        queue_event(key_event, (struct key_event){getchar()});
         drain_events(system, len(system));
     }
     return game_state == DIED ? 1 : 0;
